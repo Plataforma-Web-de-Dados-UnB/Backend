@@ -12,7 +12,6 @@ obj/
 appsettings.*.json
 !appsettings.Development.json
 !appsettings.json
-Migrations/
 *.db
 *.db-shm
 *.db-wal
