@@ -16,7 +16,7 @@ namespace api.Services
         private readonly UserManager<Usuario> _userManager = userManager;
         private readonly IConfiguration _configuration = configuration;
 
-        public async Task<string?> RegisterAsync(UsuarioRegisterDto user)
+        public async Task<Resultado<string>> RegisterAsync(UsuarioRegisterDto user)
         {
             var usuario = new Usuario
             {
@@ -34,10 +34,10 @@ namespace api.Services
 
             if (!resultado.Succeeded)
             {
-                return resultado.Errors.FirstOrDefault()?.Description ?? "Erro desconhecido ao registrar usuário.";
+                return Resultado<string>.Falha(resultado.Errors.FirstOrDefault()?.Description ?? "Erro desconhecido ao registrar usuário.");
             }
 
-            return null;
+            return Resultado<string>.Ok("Cadastro realizado com sucesso. Aguarde a aprovação do administrador.");
         }
 
         public async Task<Resultado<UsuarioLoginResponseDto>> LoginAsync(UsuarioLoginDto user)
@@ -101,13 +101,13 @@ namespace api.Services
             );
         }
 
-        public async Task<UsuarioGetDto?> GetUsuarioByIdAsync(string id)
+        public async Task<Resultado<UsuarioGetDto>> GetUsuarioByIdAsync(string id)
         {
             var usuario = await _userManager.FindByIdAsync(id).ConfigureAwait(false);
 
-            if (usuario == null) return null;
+            if (usuario == null) return Resultado<UsuarioGetDto>.Falha("Usuário não encontrado.");
 
-            return new UsuarioGetDto
+            return Resultado<UsuarioGetDto>.Ok(new UsuarioGetDto
             {
                 Id = usuario.Id,
                 Nome = usuario.Nome,
@@ -117,15 +117,15 @@ namespace api.Services
                 Status = usuario.Status,
                 CreatedAt = usuario.CreatedAt,
                 UpdatedAt = usuario.UpdatedAt
-            };
+            });
         }
 
-        public async Task<UsuarioGetDto?> GetPerfilAsync(string userId)
+        public async Task<Resultado<UsuarioGetDto>> GetPerfilAsync(string userId)
         {
             return await GetUsuarioByIdAsync(userId).ConfigureAwait(false);
         }
 
-        public async Task<List<UsuarioListDto>> GetUsuariosAsync(StatusUsuario? status, string? busca)
+        public async Task<ResultadoPaginado<UsuarioListDto>> GetUsuariosAsync(StatusUsuario? status, CargoUsuario? cargo, string? busca, int page, int limit)
         {
             var query = _userManager.Users.AsQueryable();
 
@@ -134,40 +134,51 @@ namespace api.Services
                 query = query.Where(u => u.Status == status.Value);
             }
 
+            if (cargo.HasValue)
+            {
+                query = query.Where(u => u.Cargo == cargo.Value);
+            }
+
             if (!string.IsNullOrWhiteSpace(busca))
             {
-                query = query.Where(u => 
-                    u.Nome.Contains(busca) || 
-                    u.UltimoNome.Contains(busca) || 
+                query = query.Where(u =>
+                    u.Nome.Contains(busca) ||
+                    u.UltimoNome.Contains(busca) ||
                     u.Email!.Contains(busca));
             }
 
-            var usuarios = await query
-                .OrderByDescending(u => u.CreatedAt)
+            query = query.OrderByDescending(u => u.CreatedAt);
+
+            int totalItens = await query.CountAsync().ConfigureAwait(false);
+
+            var itens = await query
+                .Skip((page - 1) * limit)
+                .Take(limit)
                 .ToListAsync()
                 .ConfigureAwait(false);
 
-            return usuarios.Select(u => new UsuarioListDto
-            {
-                Id = u.Id,
-                Nome = u.Nome,
-                UltimoNome = u.UltimoNome,
-                Email = u.Email!,
-                Cargo = u.Cargo,
-                Status = u.Status,
-                CreatedAt = u.CreatedAt
-            }).ToList();
+            return ResultadoPaginado<UsuarioListDto>.Ok(page, limit, totalItens,
+                itens.Select(u => new UsuarioListDto
+                {
+                    Id = u.Id,
+                    Nome = u.Nome,
+                    UltimoNome = u.UltimoNome,
+                    Email = u.Email!,
+                    Cargo = u.Cargo,
+                    Status = u.Status,
+                    CreatedAt = u.CreatedAt
+                }).ToList());
         }
 
-        public async Task<string?> UpdateStatusAsync(string id, StatusUsuario status)
+        public async Task<Resultado<string>> UpdateStatusAsync(string id, StatusUsuario status)
         {
             var usuario = await _userManager.FindByIdAsync(id).ConfigureAwait(false);
 
-            if (usuario == null) return "Usuário não encontrado.";
+            if (usuario == null) return Resultado<string>.Falha("Usuário não encontrado.");
 
             if (usuario.Cargo == CargoUsuario.SuperAdministrador)
             {
-                return "Não é possível alterar o status de um Super Administrador.";
+                return Resultado<string>.Falha("Não é possível alterar o status de um Super Administrador.");
             }
 
             usuario.Status = status;
@@ -177,29 +188,29 @@ namespace api.Services
 
             if (!resultado.Succeeded)
             {
-                return resultado.Errors.FirstOrDefault()?.Description ?? "Erro ao atualizar status do usuário.";
+                return Resultado<string>.Falha(resultado.Errors.FirstOrDefault()?.Description ?? "Erro ao atualizar status do usuário.");
             }
 
-            return null;
+            return Resultado<string>.Ok("Status atualizado com sucesso.");
         }
 
-        public async Task<string?> ChangePasswordAsync(string userId, UsuarioChangePasswordDto passwordDto)
+        public async Task<Resultado<string>> ChangePasswordAsync(string userId, UsuarioChangePasswordDto passwordDto)
         {
             var usuario = await _userManager.FindByIdAsync(userId).ConfigureAwait(false);
 
-            if (usuario == null) return "Usuário não encontrado.";
+            if (usuario == null) return Resultado<string>.Falha("Usuário não encontrado.");
 
             var resultado = await _userManager.ChangePasswordAsync(usuario, passwordDto.SenhaAntiga, passwordDto.SenhaNova).ConfigureAwait(false);
 
             if (!resultado.Succeeded)
             {
-                return resultado.Errors.FirstOrDefault()?.Description ?? "Erro ao alterar senha.";
+                return Resultado<string>.Falha(resultado.Errors.FirstOrDefault()?.Description ?? "Erro ao alterar senha.");
             }
 
             usuario.UpdatedAt = DateTime.UtcNow;
             await _userManager.UpdateAsync(usuario).ConfigureAwait(false);
 
-            return null;
+            return Resultado<string>.Ok("Senha alterada com sucesso.");
         }
     }
 }

@@ -18,14 +18,14 @@ namespace api.Controllers
                 return BadRequest(ModelState);
             }
 
-            string? usuarioCriado = await usuarioService.RegisterAsync(usuarioRegisterDto).ConfigureAwait(false);
+            var resultado = await usuarioService.RegisterAsync(usuarioRegisterDto).ConfigureAwait(false);
 
-            if (usuarioCriado != null)
+            if (!resultado.Success)
             {
-                return BadRequest(new { message = usuarioCriado });
+                return BadRequest(new { message = resultado.Error });
             }
 
-            return Ok(new { message = "Cadastro realizado com sucesso. Aguarde a aprovação do administrador." });
+            return Ok(new { message = resultado.Data });
         }
 
         [HttpPost("login")]
@@ -58,12 +58,12 @@ namespace api.Controllers
 
             var perfil = await usuarioService.GetPerfilAsync(userId).ConfigureAwait(false);
 
-            if (perfil == null)
+            if (!perfil.Success)
             {
-                return NotFound(new { message = "Perfil não encontrado." });
+                return NotFound(new { message = perfil.Error });
             }
 
-            return Ok(perfil);
+            return Ok(perfil.Data);
         }
 
         [Authorize]
@@ -82,14 +82,14 @@ namespace api.Controllers
                 return Unauthorized(new { message = "Usuário não autenticado." });
             }
 
-            string? erro = await usuarioService.ChangePasswordAsync(userId, passwordDto).ConfigureAwait(false);
+            var resultado = await usuarioService.ChangePasswordAsync(userId, passwordDto).ConfigureAwait(false);
 
-            if (erro != null)
+            if (!resultado.Success)
             {
-                return BadRequest(new { message = erro });
+                return BadRequest(new { message = resultado.Error });
             }
 
-            return Ok(new { message = "Senha alterada com sucesso." });
+            return Ok(new { message = resultado.Data });
         }
     }
 }

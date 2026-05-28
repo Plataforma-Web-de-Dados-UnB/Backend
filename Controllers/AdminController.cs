@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using api.Helpers;
 using api.Models;
 using api.Services.Interfaces;
 using api.Views;
@@ -12,12 +13,18 @@ namespace api.Controllers
     public class AdminController(IUsuario usuarioService) : ControllerBase
     {
         [HttpGet("usuarios")]
-        public async Task<ActionResult<List<UsuarioListDto>>> GetUsuarios(
+        public async Task<ActionResult<ResultadoPaginado<UsuarioListDto>>> GetUsuarios(
             [FromQuery] StatusUsuario? status,
-            [FromQuery] string? busca)
+            [FromQuery] CargoUsuario? cargo,
+            [FromQuery] string? busca,
+            [FromQuery] int page = 1,
+            [FromQuery] int limit = 10)
         {
-            var usuarios = await usuarioService.GetUsuariosAsync(status, busca).ConfigureAwait(false);
-            return Ok(usuarios);
+            if (page < 1) page = 1;
+            if (limit < 1) limit = 1;
+
+            var resultado = await usuarioService.GetUsuariosAsync(status, cargo, busca, page, limit).ConfigureAwait(false);
+            return Ok(resultado);
         }
 
         [HttpGet("usuarios/{id}")]
@@ -25,12 +32,12 @@ namespace api.Controllers
         {
             var usuario = await usuarioService.GetUsuarioByIdAsync(id).ConfigureAwait(false);
 
-            if (usuario == null)
+            if (!usuario.Success)
             {
-                return NotFound(new { message = "Usuário não encontrado." });
+                return NotFound(new { message = usuario.Error });
             }
 
-            return Ok(usuario);
+            return Ok(usuario.Data);
         }
 
         [HttpPut("usuarios/{id}/status")]
@@ -41,22 +48,14 @@ namespace api.Controllers
                 return BadRequest(ModelState);
             }
 
-            string? erro = await usuarioService.UpdateStatusAsync(id, statusDto.Status).ConfigureAwait(false);
+            var resultado = await usuarioService.UpdateStatusAsync(id, statusDto.Status).ConfigureAwait(false);
 
-            if (erro != null)
+            if (!resultado.Success)
             {
-                return BadRequest(new { message = erro });
+                return BadRequest(new { message = resultado.Error });
             }
 
-            string mensagem = statusDto.Status switch
-            {
-                StatusUsuario.Ativo => "Usuário aprovado com sucesso.",
-                StatusUsuario.Recusado => "Usuário recusado com sucesso.",
-                StatusUsuario.Pendente => "Status do usuário alterado para pendente.",
-                _ => "Status atualizado com sucesso."
-            };
-
-            return Ok(new { message = mensagem });
+            return Ok(new { message = resultado.Data });
         }
     }
 }

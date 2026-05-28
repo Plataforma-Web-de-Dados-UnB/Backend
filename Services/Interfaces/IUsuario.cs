@@ -6,12 +6,12 @@ namespace api.Services.Interfaces
 {
     public interface IUsuario
     {
-        Task<string?> RegisterAsync(UsuarioRegisterDto user);
+        Task<Resultado<string>> RegisterAsync(UsuarioRegisterDto user);
         Task<Resultado<UsuarioLoginResponseDto>> LoginAsync(UsuarioLoginDto user);
-        Task<UsuarioGetDto?> GetUsuarioByIdAsync(string id);
-        Task<UsuarioGetDto?> GetPerfilAsync(string userId);
-        Task<List<UsuarioListDto>> GetUsuariosAsync(StatusUsuario? status, string? busca);
-        Task<string?> UpdateStatusAsync(string id, StatusUsuario status);
-        Task<string?> ChangePasswordAsync(string userId, UsuarioChangePasswordDto passwordDto);
+        Task<Resultado<UsuarioGetDto>> GetUsuarioByIdAsync(string id);
+        Task<Resultado<UsuarioGetDto>> GetPerfilAsync(string userId);
+        Task<ResultadoPaginado<UsuarioListDto>> GetUsuariosAsync(StatusUsuario? status, CargoUsuario? cargo, string? busca, int page, int limit);
+        Task<Resultado<string>> UpdateStatusAsync(string id, StatusUsuario status);
+        Task<Resultado<string>> ChangePasswordAsync(string userId, UsuarioChangePasswordDto passwordDto);
     }
 }
