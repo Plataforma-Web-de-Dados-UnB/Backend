@@ -1,0 +1,387 @@
+{
+  "info": {
+    "_postman_id": "7f1c5a15-9b1d-4cc9-85e6-9d7b53b24ab3",
+    "name": "TCC Backend",
+    "description": "Coleção Postman para os endpoints atuais do backend ASP.NET Core.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string",
+      "description": "Base URL do backend ASP.NET Core. Ajuste conforme ambiente (ex.: https://api.seudominio.com)."
+    },
+    {
+      "key": "usuarioNome",
+      "value": "Fulano",
+      "type": "string",
+      "description": "Nome a ser utilizado no cadastro de usuário."
+    },
+    {
+      "key": "usuarioUltimoNome",
+      "value": "da Silva",
+      "type": "string",
+      "description": "Último nome a ser utilizado no cadastro de usuário."
+    },
+    {
+      "key": "usuarioEmail",
+      "value": "usuario@example.com",
+      "type": "string",
+      "description": "Email para cadastro/login de usuário."
+    },
+    {
+      "key": "usuarioSenha",
+      "value": "SenhaForte123",
+      "type": "string",
+      "description": "Senha do usuário (mínimo 8 caracteres)."
+    },
+    {
+      "key": "usuarioToken",
+      "value": "",
+      "type": "string",
+      "description": "Token JWT de um usuário autenticado. Preenchido automaticamente no request de login."
+    },
+    {
+      "key": "superAdminToken",
+      "value": "",
+      "type": "string",
+      "description": "Token JWT de um usuário com cargo SuperAdministrador. Necessário para chamadas ao controller Admin."
+    },
+    {
+      "key": "usuarioId",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "string",
+      "description": "Identificador de usuário para consultas/administração."
+    },
+    {
+      "key": "statusFiltro",
+      "value": "Ativo",
+      "type": "string",
+      "description": "Filtro opcional de status (Pendente, Ativo ou Recusado) na listagem administrativa."
+    },
+    {
+      "key": "cargoFiltro",
+      "value": "Administrador",
+      "type": "string",
+      "description": "Filtro opcional de cargo (SuperAdministrador, Administrador ou Visitante) na listagem administrativa."
+    },
+    {
+      "key": "buscaTermo",
+      "value": "",
+      "type": "string",
+      "description": "Filtro opcional de busca por nome, sobrenome ou email na listagem administrativa."
+    },
+    {
+      "key": "page",
+      "value": "1",
+      "type": "string",
+      "description": "Número da página para listagem paginada (>= 1)."
+    },
+    {
+      "key": "limit",
+      "value": "10",
+      "type": "string",
+      "description": "Quantidade de registros por página (>= 1)."
+    },
+    {
+      "key": "statusAtualizacao",
+      "value": "1",
+      "type": "string",
+      "description": "Novo status para atualização administrativa (índice do enum: 0=Pendente, 1=Ativo, 2=Recusado)."
+    }
+  ],
+  "item": [
+    {
+      "name": "Usuario",
+      "description": "Fluxo de autenticação e ações do usuário autenticado.",
+      "item": [
+        {
+          "name": "Registrar usuário",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"Nome\": \"{{usuarioNome}}\",\n    \"UltimoNome\": \"{{usuarioUltimoNome}}\",\n    \"Email\": \"{{usuarioEmail}}\",\n    \"Senha\": \"{{usuarioSenha}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/Usuario/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "Usuario",
+                "register"
+              ]
+            },
+            "description": "Cria um novo usuário e retorna uma mensagem orientando aguardar aprovação."
+          },
+          "response": []
+        },
+        {
+          "name": "Login usuário",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"Email\": \"{{usuarioEmail}}\",\n    \"Senha\": \"{{usuarioSenha}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/Usuario/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "Usuario",
+                "login"
+              ]
+            },
+            "description": "Realiza login e retorna um token JWT e dados básicos do usuário."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  try {",
+                  "    const data = pm.response.json();",
+                  "    if (data && data.token) {",
+                  "      pm.collectionVariables.set('usuarioToken', data.token);",
+                  "      pm.collectionVariables.set('usuarioId', data.id || pm.collectionVariables.get('usuarioId'));",
+                  "    }",
+                  "  } catch (error) {",
+                  "    console.warn('Não foi possível extrair o token automaticamente.', error);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Perfil do usuário",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{usuarioToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/Usuario/perfil",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "Usuario",
+                "perfil"
+              ]
+            },
+            "description": "Recupera os dados do usuário autenticado usando o token gerado no login."
+          },
+          "response": []
+        },
+        {
+          "name": "Alterar senha",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{usuarioToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"SenhaAntiga\": \"{{usuarioSenha}}\",\n    \"SenhaNova\": \"{{usuarioSenha}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/Usuario/senha",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "Usuario",
+                "senha"
+              ]
+            },
+            "description": "Altera a senha do usuário autenticado. Atualize as variáveis de senha conforme necessário."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "description": "Recursos administrativos (requer token de SuperAdministrador).",
+      "item": [
+        {
+          "name": "Listar usuários",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{superAdminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/Admin/usuarios?page={{page}}&limit={{limit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "Admin",
+                "usuarios"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "{{statusFiltro}}",
+                  "description": "Opcional. Filtra usuários por StatusUsuario.",
+                  "disabled": true
+                },
+                {
+                  "key": "cargo",
+                  "value": "{{cargoFiltro}}",
+                  "description": "Opcional. Filtra usuários por CargoUsuario.",
+                  "disabled": true
+                },
+                {
+                  "key": "busca",
+                  "value": "{{buscaTermo}}",
+                  "description": "Opcional. Busca por nome, sobrenome ou email.",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "{{page}}",
+                  "description": "Página desejada (default 1)."
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Quantidade por página (default 10)."
+                }
+              ]
+            },
+            "description": "Retorna usuários paginados com filtros opcionais por status, cargo e busca."
+          },
+          "response": []
+        },
+        {
+          "name": "Buscar usuário por ID",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{superAdminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/Admin/usuarios/{{usuarioId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "Admin",
+                "usuarios",
+                "{{usuarioId}}"
+              ]
+            },
+            "description": "Recupera dados detalhados de um usuário específico."
+          },
+          "response": []
+        },
+        {
+          "name": "Atualizar status de usuário",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{superAdminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"Status\": {{statusAtualizacao}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/Admin/usuarios/{{usuarioId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "Admin",
+                "usuarios",
+                "{{usuarioId}}",
+                "status"
+              ]
+            },
+            "description": "Atualiza o status do usuário informado. Utilize valores válidos do enum (Pendente, Ativo, Recusado)."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
