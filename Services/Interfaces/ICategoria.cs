@@ -1,0 +1,15 @@
+using api.Helpers;
+using api.Views;
+
+namespace api.Services.Interfaces
+{
+    public interface ICategoria
+    {
+        Task<ResultadoPaginado<CategoriaListDto>> GetCategoriasAsync(bool? active, string? busca, int page, int limit);
+        Task<Resultado<CategoriaGetDto>> GetCategoriaByIdAsync(int id, bool apenasAtiva = false);
+        Task<Resultado<CategoriaGetDto>> CreateCategoriaAsync(CategoriaCreateDto dto, string baseUrl);
+        Task<Resultado<CategoriaGetDto>> UpdateCategoriaAsync(int id, CategoriaUpdateDto dto, string baseUrl);
+        Task<Resultado<string>> DeleteCategoriaAsync(int id);
+        Task<Resultado<string>> ToggleActiveAsync(int id);
+    }
+}

@@ -34,6 +34,9 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
 
 builder.Services.AddScoped<IUsuario, UsuarioService>();
+builder.Services.AddScoped<ICategoria, CategoriaService>();
+builder.Services.AddScoped<IPainel, PainelService>();
+builder.Services.AddScoped<ISugestao, SugestaoService>();
 
 builder.Services.AddIdentity<Usuario, IdentityRole>()
     .AddEntityFrameworkStores<AppDbContext>()
@@ -75,6 +78,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowMultipleOrigins");
+
+app.UseStaticFiles();
 
 app.UseHttpsRedirection();
 
