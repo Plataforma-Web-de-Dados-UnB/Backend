@@ -32,17 +32,80 @@ namespace api.Controllers
         public async Task<ActionResult<UsuarioLoginResponseDto>> LoginUsuario([FromBody] UsuarioLoginDto usuarioLoginDto)
         {
             if (!ModelState.IsValid)
-            {
                 return BadRequest(ModelState);
+
+            var resultado = await usuarioService.LoginAsync(usuarioLoginDto).ConfigureAwait(false);
+
+            if (!resultado.Success) return BadRequest(new { message = resultado.Error });
+            if (resultado.Data == null) return Unauthorized(new { message = "Erro ao realizar login." });
+
+            DefinirRefreshTokenCookie(resultado.Data.RefreshToken);
+
+            return Ok(new
+            {
+                resultado.Data.AccessToken,
+                resultado.Data.Id,
+                resultado.Data.Nome,
+                resultado.Data.UltimoNome,
+                resultado.Data.Email,
+                resultado.Data.Cargo
+            });
+        }
+
+        [HttpPost("refresh")]
+        public async Task<ActionResult<AuthRefreshResponseDto>> Refresh()
+        {
+            string? refreshToken = Request.Cookies["refreshToken"];
+
+            if (string.IsNullOrWhiteSpace(refreshToken))
+                return Unauthorized(new { message = "Refresh token ausente." });
+
+            var resultado = await usuarioService.RefreshAsync(refreshToken).ConfigureAwait(false);
+
+            if (!resultado.Success)
+            {
+                RemoverRefreshTokenCookie();
+                return Unauthorized(new { message = resultado.Error });
             }
 
-            var usuario = await usuarioService.LoginAsync(usuarioLoginDto).ConfigureAwait(false);
+            DefinirRefreshTokenCookie(resultado.Data!.RefreshToken);
 
-            if (!usuario.Success) return BadRequest(new { message = usuario.Error });
+            return Ok(new { resultado.Data.AccessToken });
+        }
 
-            if (usuario.Data == null) return Unauthorized(new { message = "Erro ao realizar login." });
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout()
+        {
+            string? refreshToken = Request.Cookies["refreshToken"];
 
-            return Ok(usuario.Data);
+            if (!string.IsNullOrWhiteSpace(refreshToken))
+                await usuarioService.LogoutAsync(refreshToken).ConfigureAwait(false);
+
+            RemoverRefreshTokenCookie();
+
+            return Ok(new { message = "Sessão encerrada com sucesso." });
+        }
+
+        private void DefinirRefreshTokenCookie(string token)
+        {
+            var opcoes = new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Strict,
+                Expires = DateTimeOffset.UtcNow.AddDays(7)
+            };
+            Response.Cookies.Append("refreshToken", token, opcoes);
+        }
+
+        private void RemoverRefreshTokenCookie()
+        {
+            Response.Cookies.Delete("refreshToken", new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Strict
+            });
         }
 
         [Authorize]

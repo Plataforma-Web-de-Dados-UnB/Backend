@@ -8,6 +8,8 @@ namespace api.Services.Interfaces
     {
         Task<Resultado<string>> RegisterAsync(UsuarioRegisterDto user);
         Task<Resultado<UsuarioLoginResponseDto>> LoginAsync(UsuarioLoginDto user);
+        Task<Resultado<AuthRefreshResponseDto>> RefreshAsync(string refreshToken);
+        Task<Resultado<string>> LogoutAsync(string refreshToken);
         Task<Resultado<UsuarioGetDto>> GetUsuarioByIdAsync(string id);
         Task<Resultado<UsuarioGetDto>> GetPerfilAsync(string userId);
         Task<ResultadoPaginado<UsuarioListDto>> GetUsuariosAsync(StatusUsuario? status, CargoUsuario? cargo, string? busca, int page, int limit);

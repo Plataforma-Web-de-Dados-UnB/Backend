@@ -10,6 +10,7 @@ namespace api.Data
         public DbSet<Categoria> Categorias { get; set; } = null!;
         public DbSet<Painel> Paineis { get; set; } = null!;
         public DbSet<Sugestao> Sugestoes { get; set; } = null!;
+        public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -20,6 +21,16 @@ namespace api.Data
                 .WithMany(c => c.Paineis)
                 .HasForeignKey(p => p.CategoriaId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<RefreshToken>()
+                .HasOne(r => r.Usuario)
+                .WithMany()
+                .HasForeignKey(r => r.UsuarioId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<RefreshToken>()
+                .HasIndex(r => r.Token)
+                .IsUnique();
         }
     }
 }

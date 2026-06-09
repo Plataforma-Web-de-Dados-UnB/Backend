@@ -6,6 +6,7 @@ namespace api.Models;
 public enum TipoSugestao
 {
     Sugestao,
+    Erro,
     Relato
 }
 

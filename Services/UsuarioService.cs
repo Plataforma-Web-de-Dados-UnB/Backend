@@ -1,9 +1,11 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using api.Data;
 using api.Helpers;
 using api.Models;
 using api.Services.Interfaces;
@@ -11,10 +13,11 @@ using api.Views;
 
 namespace api.Services
 {
-    public class UsuarioService(UserManager<Usuario> userManager, IConfiguration configuration) : IUsuario
+    public class UsuarioService(UserManager<Usuario> userManager, IConfiguration configuration, AppDbContext context) : IUsuario
     {
         private readonly UserManager<Usuario> _userManager = userManager;
         private readonly IConfiguration _configuration = configuration;
+        private readonly AppDbContext _context = context;
 
         public async Task<Resultado<string>> RegisterAsync(UsuarioRegisterDto user)
         {
@@ -40,6 +43,60 @@ namespace api.Services
             return Resultado<string>.Ok("Cadastro realizado com sucesso. Aguarde a aprovação do administrador.");
         }
 
+        private Resultado<string> GerarAccessToken(Usuario usuario)
+        {
+            string? chaveJwt = _configuration["Jwt:Key"];
+            if (string.IsNullOrWhiteSpace(chaveJwt))
+                return Resultado<string>.Falha("A chave de autenticação está ausente ou vazia.");
+
+            int expiracaoMinutos = int.TryParse(_configuration["Jwt:AccessTokenExpirationMinutes"], out int min) ? min : 15;
+
+            var alegacoes = new List<Claim>
+            {
+                new(ClaimTypes.NameIdentifier, usuario.Id),
+                new(ClaimTypes.Name, usuario.Email!),
+                new("Nome", usuario.Nome),
+                new("UltimoNome", usuario.UltimoNome),
+                new("Email", usuario.Email!),
+                new(ClaimTypes.Role, usuario.Cargo.ToString())
+            };
+
+            var chave = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(chaveJwt));
+            var credenciais = new SigningCredentials(chave, SecurityAlgorithms.HmacSha256);
+
+            var token = new JwtSecurityToken(
+                issuer: _configuration["Jwt:Issuer"],
+                audience: _configuration["Jwt:Audience"],
+                claims: alegacoes,
+                expires: DateTime.UtcNow.AddMinutes(expiracaoMinutos),
+                signingCredentials: credenciais
+            );
+
+            return Resultado<string>.Ok(new JwtSecurityTokenHandler().WriteToken(token));
+        }
+
+        private async Task<string> GerarRefreshTokenAsync(string usuarioId, string familyId)
+        {
+            int expiracaoDias = int.TryParse(_configuration["Jwt:RefreshTokenExpirationDays"], out int dias) ? dias : 7;
+
+            var tokenBytes = RandomNumberGenerator.GetBytes(64);
+            string token = Convert.ToBase64String(tokenBytes);
+
+            var refreshToken = new RefreshToken
+            {
+                Token = token,
+                FamilyId = familyId,
+                UsuarioId = usuarioId,
+                ExpiresAt = DateTime.UtcNow.AddDays(expiracaoDias),
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.RefreshTokens.Add(refreshToken);
+            await _context.SaveChangesAsync().ConfigureAwait(false);
+
+            return token;
+        }
+
         public async Task<Resultado<UsuarioLoginResponseDto>> LoginAsync(UsuarioLoginDto user)
         {
             var usuario = await _userManager.FindByEmailAsync(user.Email).ConfigureAwait(false);
@@ -51,47 +108,23 @@ namespace api.Services
             if (!resultado) return Resultado<UsuarioLoginResponseDto>.Falha("Senha incorreta.");
 
             if (usuario.Status == StatusUsuario.Pendente)
-            {
                 return Resultado<UsuarioLoginResponseDto>.Falha("Seu cadastro está pendente de aprovação pelo administrador.");
-            }
 
             if (usuario.Status == StatusUsuario.Recusado)
-            {
                 return Resultado<UsuarioLoginResponseDto>.Falha("Seu acesso foi recusado. Entre em contato com o administrador.");
-            }
 
-            var alegacoes = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, usuario.Id),
-                new Claim(ClaimTypes.Name, usuario.Email!),
-                new Claim("Nome", usuario.Nome),
-                new Claim("UltimoNome", usuario.UltimoNome),
-                new Claim("Email", usuario.Email!),
-                new Claim(ClaimTypes.Role, usuario.Cargo.ToString())
-            };
+            var accessTokenResult = GerarAccessToken(usuario);
+            if (!accessTokenResult.Success)
+                return Resultado<UsuarioLoginResponseDto>.Falha(accessTokenResult.Error!);
 
-            string? chaveJwt = _configuration["Jwt:Key"];
-
-            if (string.IsNullOrWhiteSpace(chaveJwt)) return Resultado<UsuarioLoginResponseDto>.Falha("A chave de autenticação está ausente ou vazia.");
-
-            var chave = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(chaveJwt));
-
-            var credenciais = new SigningCredentials(chave, SecurityAlgorithms.HmacSha256);
-
-            var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"],
-                audience: _configuration["Jwt:Audience"],
-                claims: alegacoes,
-                expires: DateTime.UtcNow.AddHours(2),
-                signingCredentials: credenciais
-            );
-
-            string tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+            string familyId = Guid.NewGuid().ToString();
+            string refreshToken = await GerarRefreshTokenAsync(usuario.Id, familyId).ConfigureAwait(false);
 
             return Resultado<UsuarioLoginResponseDto>.Ok(
                 new UsuarioLoginResponseDto
                 {
-                    Token = tokenString,
+                    AccessToken = accessTokenResult.Data!,
+                    RefreshToken = refreshToken,
                     Id = usuario.Id,
                     Nome = usuario.Nome,
                     UltimoNome = usuario.UltimoNome,
@@ -99,6 +132,74 @@ namespace api.Services
                     Cargo = usuario.Cargo
                 }
             );
+        }
+
+        public async Task<Resultado<AuthRefreshResponseDto>> RefreshAsync(string refreshToken)
+        {
+            var tokenEntry = await _context.RefreshTokens
+                .Include(r => r.Usuario)
+                .FirstOrDefaultAsync(r => r.Token == refreshToken)
+                .ConfigureAwait(false);
+
+            if (tokenEntry == null)
+                return Resultado<AuthRefreshResponseDto>.Falha("Refresh token inválido.");
+
+            if (tokenEntry.IsRevoked)
+            {
+                await RevogarFamiliaAsync(tokenEntry.FamilyId).ConfigureAwait(false);
+                return Resultado<AuthRefreshResponseDto>.Falha("Refresh token reutilizado. Sessão encerrada por segurança.");
+            }
+
+            if (tokenEntry.IsExpired)
+                return Resultado<AuthRefreshResponseDto>.Falha("Refresh token expirado. Faça login novamente.");
+
+            var usuario = tokenEntry.Usuario;
+
+            if (usuario.Status != StatusUsuario.Ativo)
+                return Resultado<AuthRefreshResponseDto>.Falha("Acesso não autorizado.");
+
+            tokenEntry.RevokedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync().ConfigureAwait(false);
+
+            var accessTokenResult = GerarAccessToken(usuario);
+            if (!accessTokenResult.Success)
+                return Resultado<AuthRefreshResponseDto>.Falha(accessTokenResult.Error!);
+
+            string novoRefreshToken = await GerarRefreshTokenAsync(usuario.Id, tokenEntry.FamilyId).ConfigureAwait(false);
+
+            return Resultado<AuthRefreshResponseDto>.Ok(new AuthRefreshResponseDto
+            {
+                AccessToken = accessTokenResult.Data!,
+                RefreshToken = novoRefreshToken
+            });
+        }
+
+        public async Task<Resultado<string>> LogoutAsync(string refreshToken)
+        {
+            var tokenEntry = await _context.RefreshTokens
+                .FirstOrDefaultAsync(r => r.Token == refreshToken)
+                .ConfigureAwait(false);
+
+            if (tokenEntry == null || tokenEntry.IsRevoked)
+                return Resultado<string>.Ok("Sessão encerrada.");
+
+            tokenEntry.RevokedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync().ConfigureAwait(false);
+
+            return Resultado<string>.Ok("Sessão encerrada com sucesso.");
+        }
+
+        private async Task RevogarFamiliaAsync(string familyId)
+        {
+            var tokensAtivos = await _context.RefreshTokens
+                .Where(r => r.FamilyId == familyId && r.RevokedAt == null)
+                .ToListAsync()
+                .ConfigureAwait(false);
+
+            foreach (var t in tokensAtivos)
+                t.RevokedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync().ConfigureAwait(false);
         }
 
         public async Task<Resultado<UsuarioGetDto>> GetUsuarioByIdAsync(string id)

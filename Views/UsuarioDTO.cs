@@ -35,12 +35,19 @@ namespace api.Views
 
     public class UsuarioLoginResponseDto
     {
-        public string Token { get; set; } = string.Empty;
+        public string AccessToken { get; set; } = string.Empty;
+        public string RefreshToken { get; set; } = string.Empty;
         public string Id { get; set; } = string.Empty;
         public string Nome { get; set; } = string.Empty;
         public string UltimoNome { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public CargoUsuario Cargo { get; set; }
+    }
+
+    public class AuthRefreshResponseDto
+    {
+        public string AccessToken { get; set; } = string.Empty;
+        public string RefreshToken { get; set; } = string.Empty;
     }
 
     public class UsuarioGetDto
