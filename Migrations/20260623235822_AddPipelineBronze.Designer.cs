@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using api.Data;
@@ -11,9 +12,11 @@ using api.Data;
 namespace api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260623235822_AddPipelineBronze")]
+    partial class AddPipelineBronze
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -185,49 +188,6 @@ namespace api.Migrations
                     b.HasIndex("BatchId");
 
                     b.ToTable("arquivos_brutos", "bronze");
-                });
-
-            modelBuilder.Entity("api.Models.BronzeUploadAuditoria", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<Guid>("BatchId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("batch_id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("FileHash")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("file_hash");
-
-                    b.Property<string>("NomeArquivo")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("nome_arquivo");
-
-                    b.Property<int>("TotalLinhas")
-                        .HasColumnType("integer")
-                        .HasColumnName("total_linhas");
-
-                    b.Property<string>("UploadedBy")
-                        .HasColumnType("text")
-                        .HasColumnName("uploaded_by");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("FileHash")
-                        .IsUnique();
-
-                    b.ToTable("uploads_auditoria", "bronze");
                 });
 
             modelBuilder.Entity("api.Models.Categoria", b =>

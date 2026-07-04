@@ -37,6 +37,9 @@ builder.Services.AddScoped<IUsuario, UsuarioService>();
 builder.Services.AddScoped<ICategoria, CategoriaService>();
 builder.Services.AddScoped<IPainel, PainelService>();
 builder.Services.AddScoped<ISugestao, SugestaoService>();
+builder.Services.AddScoped<IPipeline, PipelineService>();
+builder.Services.AddScoped<IPipelineExecucao, PipelineExecucaoService>();
+builder.Services.AddSingleton<IRedisPublisher, RedisPublisher>();
 
 builder.Services.AddIdentity<Usuario, IdentityRole>()
     .AddEntityFrameworkStores<AppDbContext>()
