@@ -17,6 +17,7 @@ namespace api.Services
             Nome = p.Nome,
             Descricao = p.Descricao,
             GraphEmbedLink = p.GraphEmbedLink,
+            EmbedDashboardUuid = p.EmbedDashboardUuid,
             SortOrdem = p.SortOrdem,
             Active = p.Active,
             DeactivatedAt = p.DeactivatedAt,
@@ -32,6 +33,7 @@ namespace api.Services
             Nome = p.Nome,
             Descricao = p.Descricao,
             GraphEmbedLink = p.GraphEmbedLink,
+            EmbedDashboardUuid = p.EmbedDashboardUuid,
             SortOrdem = p.SortOrdem,
             Active = p.Active,
             CreatedAt = p.CreatedAt,
@@ -91,6 +93,7 @@ namespace api.Services
                 Nome = dto.Nome,
                 Descricao = dto.Descricao,
                 GraphEmbedLink = dto.GraphEmbedLink,
+                EmbedDashboardUuid = dto.EmbedDashboardUuid,
                 SortOrdem = dto.SortOrdem,
                 CategoriaId = dto.CategoriaId,
                 Active = true,
@@ -124,6 +127,7 @@ namespace api.Services
             painel.Nome = dto.Nome;
             painel.Descricao = dto.Descricao;
             painel.GraphEmbedLink = dto.GraphEmbedLink;
+            painel.EmbedDashboardUuid = dto.EmbedDashboardUuid;
             painel.SortOrdem = dto.SortOrdem;
             painel.CategoriaId = dto.CategoriaId;
             painel.UpdatedAt = DateTime.UtcNow;

@@ -14,7 +14,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Configuration.AddEnvironmentVariables();
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(opts =>
+        opts.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -39,11 +41,13 @@ builder.Services.AddScoped<IPainel, PainelService>();
 builder.Services.AddScoped<ISugestao, SugestaoService>();
 builder.Services.AddScoped<IPipeline, PipelineService>();
 builder.Services.AddScoped<IPipelineExecucao, PipelineExecucaoService>();
+builder.Services.AddScoped<ISupersetService, SupersetService>();
 builder.Services.AddSingleton<IRedisPublisher, RedisPublisher>();
 
 builder.Services.AddIdentity<Usuario, IdentityRole>()
     .AddEntityFrameworkStores<AppDbContext>()
-    .AddDefaultTokenProviders();
+    .AddDefaultTokenProviders()
+    .AddErrorDescriber<api.Helpers.PortugueseIdentityErrorDescriber>();
 
 JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 

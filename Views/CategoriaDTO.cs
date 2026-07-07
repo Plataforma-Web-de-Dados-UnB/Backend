@@ -4,8 +4,8 @@ namespace api.Views
 {
     public class CategoriaCreateDto
     {
-        [Required]
-        [StringLength(255)]
+        [Required(ErrorMessage = "O campo Nome é obrigatório.")]
+        [StringLength(255, ErrorMessage = "O campo Nome deve ter no máximo 255 caracteres.")]
         public string Nome { get; set; } = string.Empty;
 
         public string? Descricao { get; set; }
@@ -17,8 +17,8 @@ namespace api.Views
 
     public class CategoriaUpdateDto
     {
-        [Required]
-        [StringLength(255)]
+        [Required(ErrorMessage = "O campo Nome é obrigatório.")]
+        [StringLength(255, ErrorMessage = "O campo Nome deve ter no máximo 255 caracteres.")]
         public string Nome { get; set; } = string.Empty;
 
         public string? Descricao { get; set; }

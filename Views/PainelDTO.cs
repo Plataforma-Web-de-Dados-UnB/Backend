@@ -4,37 +4,43 @@ namespace api.Views
 {
     public class PainelCreateDto
     {
-        [Required]
-        [StringLength(255)]
+        [Required(ErrorMessage = "O campo Nome é obrigatório.")]
+        [StringLength(255, ErrorMessage = "O campo Nome deve ter no máximo 255 caracteres.")]
         public string Nome { get; set; } = string.Empty;
 
         public string? Descricao { get; set; }
 
-        [Required]
-        [StringLength(2048)]
+        [Required(ErrorMessage = "O link de incorporação (embed) é obrigatório.")]
+        [StringLength(2048, ErrorMessage = "O link do embed deve ter no máximo 2048 caracteres.")]
         public string GraphEmbedLink { get; set; } = string.Empty;
+
+        [StringLength(255, ErrorMessage = "O UUID do embed deve ter no máximo 255 caracteres.")]
+        public string? EmbedDashboardUuid { get; set; }
 
         public int SortOrdem { get; set; } = 0;
 
-        [Required]
+        [Required(ErrorMessage = "A Categoria é obrigatória.")]
         public int CategoriaId { get; set; }
     }
 
     public class PainelUpdateDto
     {
-        [Required]
-        [StringLength(255)]
+        [Required(ErrorMessage = "O campo Nome é obrigatório.")]
+        [StringLength(255, ErrorMessage = "O campo Nome deve ter no máximo 255 caracteres.")]
         public string Nome { get; set; } = string.Empty;
 
         public string? Descricao { get; set; }
 
-        [Required]
-        [StringLength(2048)]
+        [Required(ErrorMessage = "O link de incorporação (embed) é obrigatório.")]
+        [StringLength(2048, ErrorMessage = "O link do embed deve ter no máximo 2048 caracteres.")]
         public string GraphEmbedLink { get; set; } = string.Empty;
+
+        [StringLength(255, ErrorMessage = "O UUID do embed deve ter no máximo 255 caracteres.")]
+        public string? EmbedDashboardUuid { get; set; }
 
         public int SortOrdem { get; set; } = 0;
 
-        [Required]
+        [Required(ErrorMessage = "A Categoria é obrigatória.")]
         public int CategoriaId { get; set; }
     }
 
@@ -44,6 +50,7 @@ namespace api.Views
         public string Nome { get; set; } = string.Empty;
         public string? Descricao { get; set; }
         public string GraphEmbedLink { get; set; } = string.Empty;
+        public string? EmbedDashboardUuid { get; set; }
         public int SortOrdem { get; set; }
         public bool Active { get; set; }
         public DateTime? DeactivatedAt { get; set; }
@@ -68,6 +75,7 @@ namespace api.Views
         public string Nome { get; set; } = string.Empty;
         public string? Descricao { get; set; }
         public string GraphEmbedLink { get; set; } = string.Empty;
+        public string? EmbedDashboardUuid { get; set; }
         public int SortOrdem { get; set; }
         public bool Active { get; set; }
         public DateTime CreatedAt { get; set; }

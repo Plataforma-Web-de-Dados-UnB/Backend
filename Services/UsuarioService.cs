@@ -101,11 +101,11 @@ namespace api.Services
         {
             var usuario = await _userManager.FindByEmailAsync(user.Email).ConfigureAwait(false);
 
-            if (usuario == null) return Resultado<UsuarioLoginResponseDto>.Falha("Email não encontrado.");
+            if (usuario == null) return Resultado<UsuarioLoginResponseDto>.Falha("As credenciais informadas estão incorretas.");
 
             bool resultado = await _userManager.CheckPasswordAsync(usuario, user.Senha).ConfigureAwait(false);
 
-            if (!resultado) return Resultado<UsuarioLoginResponseDto>.Falha("Senha incorreta.");
+            if (!resultado) return Resultado<UsuarioLoginResponseDto>.Falha("As credenciais informadas estão incorretas.");
 
             if (usuario.Status == StatusUsuario.Pendente)
                 return Resultado<UsuarioLoginResponseDto>.Falha("Seu cadastro está pendente de aprovação pelo administrador.");

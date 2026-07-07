@@ -23,6 +23,10 @@ public class Painel
     [Column("graph_embed_link")]
     public string GraphEmbedLink { get; set; } = string.Empty;
 
+    [StringLength(255)]
+    [Column("embed_dashboard_uuid")]
+    public string? EmbedDashboardUuid { get; set; }
+
     [Column("sort_ordem")]
     public int SortOrdem { get; set; } = 0;
 

@@ -5,31 +5,31 @@ namespace api.Views
 {
     public class UsuarioRegisterDto
     {
-        [Required]
-        [StringLength(255)]
+        [Required(ErrorMessage = "O campo Nome é obrigatório.")]
+        [StringLength(255, ErrorMessage = "O campo Nome deve ter no máximo 255 caracteres.")]
         public string Nome { get; set; } = string.Empty;
 
-        [Required]
-        [StringLength(255)]
+        [Required(ErrorMessage = "O campo Sobrenome é obrigatório.")]
+        [StringLength(255, ErrorMessage = "O campo Sobrenome deve ter no máximo 255 caracteres.")]
         public string UltimoNome { get; set; } = string.Empty;
 
-        [Required]
-        [EmailAddress]
+        [Required(ErrorMessage = "O campo E-mail é obrigatório.")]
+        [EmailAddress(ErrorMessage = "O e-mail informado não é válido.")]
         public string Email { get; set; } = string.Empty;
 
-        [Required]
-        [StringLength(100, MinimumLength = 8)]
+        [Required(ErrorMessage = "O campo Senha é obrigatório.")]
+        [StringLength(100, MinimumLength = 8, ErrorMessage = "A senha deve ter entre 8 e 100 caracteres.")]
         public string Senha { get; set; } = string.Empty;
     }
 
     public class UsuarioLoginDto
     {
-        [Required]
-        [EmailAddress]
+        [Required(ErrorMessage = "O campo E-mail é obrigatório.")]
+        [EmailAddress(ErrorMessage = "O e-mail informado não é válido.")]
         public string Email { get; set; } = string.Empty;
 
-        [Required]
-        [StringLength(100, MinimumLength = 8)]
+        [Required(ErrorMessage = "O campo Senha é obrigatório.")]
+        [StringLength(100, MinimumLength = 8, ErrorMessage = "A senha deve ter entre 8 e 100 caracteres.")]
         public string Senha { get; set; } = string.Empty;
     }
 
@@ -82,12 +82,12 @@ namespace api.Views
 
     public class UsuarioChangePasswordDto
     {
-        [Required]
-        [StringLength(100, MinimumLength = 8)]
+        [Required(ErrorMessage = "O campo Senha Atual é obrigatório.")]
+        [StringLength(100, MinimumLength = 8, ErrorMessage = "A senha deve ter entre 8 e 100 caracteres.")]
         public string SenhaAntiga { get; set; } = string.Empty;
 
-        [Required]
-        [StringLength(100, MinimumLength = 8)]
+        [Required(ErrorMessage = "O campo Nova Senha é obrigatório.")]
+        [StringLength(100, MinimumLength = 8, ErrorMessage = "A senha deve ter entre 8 e 100 caracteres.")]
         public string SenhaNova { get; set; } = string.Empty;
     }
 }

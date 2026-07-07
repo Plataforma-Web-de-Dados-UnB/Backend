@@ -5,29 +5,31 @@ namespace api.Views
 {
     public class SugestaoCreateDto
     {
-        [Required]
-        [EnumDataType(typeof(TipoSugestao))]
+        [Required(ErrorMessage = "O tipo de solicitação é obrigatório.")]
+        [EnumDataType(typeof(TipoSugestao), ErrorMessage = "Tipo de solicitação inválido.")]
         public TipoSugestao Tipo { get; set; }
 
-        [Required]
-        [StringLength(255)]
+        [Required(ErrorMessage = "O título é obrigatório.")]
+        [StringLength(255, ErrorMessage = "O título deve ter no máximo 255 caracteres.")]
         public string Titulo { get; set; } = string.Empty;
 
-        [Required]
+        [Required(ErrorMessage = "A descrição é obrigatória.")]
         public string Descricao { get; set; } = string.Empty;
 
-        [StringLength(255)]
-        public string? NomeContato { get; set; }
+        [Required(ErrorMessage = "O nome de contato é obrigatório.")]
+        [StringLength(255, ErrorMessage = "O nome de contato deve ter no máximo 255 caracteres.")]
+        public string NomeContato { get; set; } = string.Empty;
 
-        [EmailAddress]
-        [StringLength(255)]
-        public string? EmailContato { get; set; }
+        [Required(ErrorMessage = "O e-mail de contato é obrigatório.")]
+        [EmailAddress(ErrorMessage = "O e-mail de contato informado não é válido.")]
+        [StringLength(255, ErrorMessage = "O e-mail de contato deve ter no máximo 255 caracteres.")]
+        public string EmailContato { get; set; } = string.Empty;
     }
 
     public class SugestaoUpdateStatusDto
     {
-        [Required]
-        [EnumDataType(typeof(StatusSugestao))]
+        [Required(ErrorMessage = "O status é obrigatório.")]
+        [EnumDataType(typeof(StatusSugestao), ErrorMessage = "Status inválido.")]
         public StatusSugestao Status { get; set; }
     }
 
