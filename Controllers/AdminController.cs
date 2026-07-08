@@ -67,5 +67,19 @@ namespace api.Controllers
             var kpis = await adminService.GetKpisAsync().ConfigureAwait(false);
             return Ok(kpis);
         }
+
+        [HttpDelete("usuarios/{id}")]
+        [Authorize(Roles = "SuperAdministrador")]
+        public async Task<IActionResult> DeleteUsuario(string id)
+        {
+            var resultado = await usuarioService.DeleteUsuarioAsync(id).ConfigureAwait(false);
+
+            if (!resultado.Success)
+            {
+                return BadRequest(new { message = resultado.Error });
+            }
+
+            return Ok(new { message = resultado.Data });
+        }
     }
 }

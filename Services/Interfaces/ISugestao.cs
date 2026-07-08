@@ -10,5 +10,6 @@ namespace api.Services.Interfaces
         Task<ResultadoPaginado<SugestaoListDto>> GetSugestoesAsync(StatusSugestao? status, TipoSugestao? tipo, string? busca, int page, int limit);
         Task<Resultado<SugestaoGetDto>> GetSugestaoByIdAsync(int id);
         Task<Resultado<string>> UpdateStatusAsync(int id, SugestaoUpdateStatusDto dto);
+        Task<Resultado<string>> DeleteSugestaoAsync(int id);
     }
 }

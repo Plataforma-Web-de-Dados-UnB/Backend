@@ -109,5 +109,18 @@ namespace api.Services
 
             return Resultado<string>.Ok("Status da sugestão atualizado com sucesso.");
         }
+
+        public async Task<Resultado<string>> DeleteSugestaoAsync(int id)
+        {
+            var sugestao = await _context.Sugestoes.FindAsync(id).ConfigureAwait(false);
+
+            if (sugestao == null)
+                return Resultado<string>.Falha("Sugestão não encontrada.");
+
+            _context.Sugestoes.Remove(sugestao);
+            await _context.SaveChangesAsync().ConfigureAwait(false);
+
+            return Resultado<string>.Ok("Sugestão excluída com sucesso.");
+        }
     }
 }

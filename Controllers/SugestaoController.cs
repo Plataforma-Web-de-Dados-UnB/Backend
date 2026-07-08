@@ -67,5 +67,17 @@ namespace api.Controllers
 
             return Ok(new { message = resultado.Data });
         }
+
+        [Authorize(Roles = "SuperAdministrador,Administrador")]
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteSugestao(int id)
+        {
+            var resultado = await sugestaoService.DeleteSugestaoAsync(id).ConfigureAwait(false);
+
+            if (!resultado.Success)
+                return NotFound(new { message = resultado.Error });
+
+            return Ok(new { message = resultado.Data });
+        }
     }
 }

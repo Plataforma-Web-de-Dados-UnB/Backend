@@ -9,7 +9,7 @@ namespace api.Services.Interfaces
         Task<Resultado<PainelGetDto>> GetPainelByIdAsync(int id, bool apenasAtivo = false);
         Task<Resultado<PainelGetDto>> CreatePainelAsync(PainelCreateDto dto);
         Task<Resultado<PainelGetDto>> UpdatePainelAsync(int id, PainelUpdateDto dto);
-        Task<Resultado<string>> DeletePainelAsync(int id);
+        Task<Resultado<string>> DeletePainelAsync(int id, bool hardDelete = false);
         Task<Resultado<string>> ToggleActiveAsync(int id);
         Task<List<PainelBuscaDto>> BuscarAsync(string q, int limit);
     }

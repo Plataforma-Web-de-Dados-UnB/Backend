@@ -139,17 +139,29 @@ namespace api.Services
             return Resultado<PainelGetDto>.Ok(ToGetDto(painel));
         }
 
-        public async Task<Resultado<string>> DeletePainelAsync(int id)
+        public async Task<Resultado<string>> DeletePainelAsync(int id, bool hardDelete = false)
         {
             var painel = await _context.Paineis.FindAsync(id).ConfigureAwait(false);
 
             if (painel == null)
                 return Resultado<string>.Falha("Painel não encontrado.");
 
-            _context.Paineis.Remove(painel);
-            await _context.SaveChangesAsync().ConfigureAwait(false);
+            if (hardDelete)
+            {
+                _context.Paineis.Remove(painel);
+                await _context.SaveChangesAsync().ConfigureAwait(false);
 
-            return Resultado<string>.Ok("Painel excluído com sucesso.");
+                return Resultado<string>.Ok("Painel excluído permanentemente com sucesso.");
+            }
+            else
+            {
+                painel.Active = false;
+                painel.DeactivatedAt = DateTime.UtcNow;
+                painel.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync().ConfigureAwait(false);
+
+                return Resultado<string>.Ok("Painel desativado com sucesso.");
+            }
         }
 
         public async Task<List<PainelBuscaDto>> BuscarAsync(string q, int limit)

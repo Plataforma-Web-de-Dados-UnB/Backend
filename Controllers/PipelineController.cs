@@ -14,13 +14,14 @@ namespace api.Controllers
         [HttpGet]
         public async Task<ActionResult<ResultadoPaginado<PipelineListDto>>> GetPipelines(
             [FromQuery] string? busca,
+            [FromQuery] bool? ativo,
             [FromQuery] int page = 1,
             [FromQuery] int limit = 10)
         {
             if (page < 1) page = 1;
             if (limit < 1) limit = 1;
 
-            var resultado = await pipelineService.GetPipelinesAsync(busca, page, limit).ConfigureAwait(false);
+            var resultado = await pipelineService.GetPipelinesAsync(busca, ativo, page, limit).ConfigureAwait(false);
             return Ok(resultado);
         }
 
@@ -64,9 +65,21 @@ namespace api.Controllers
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeletePipeline(int id)
+        public async Task<IActionResult> DeletePipeline(int id, [FromQuery] bool hardDelete = false)
         {
-            var resultado = await pipelineService.DeletePipelineAsync(id).ConfigureAwait(false);
+            var resultado = await pipelineService.DeletePipelineAsync(id, hardDelete).ConfigureAwait(false);
+
+            if (!resultado.Success)
+                return NotFound(new { message = resultado.Error });
+
+            return Ok(new { message = resultado.Data });
+        }
+
+        [Authorize(Roles = "SuperAdministrador,Administrador")]
+        [HttpPatch("{id}/toggle")]
+        public async Task<IActionResult> ToggleActive(int id)
+        {
+            var resultado = await pipelineService.ToggleActiveAsync(id).ConfigureAwait(false);
 
             if (!resultado.Success)
                 return NotFound(new { message = resultado.Error });

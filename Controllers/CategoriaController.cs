@@ -33,7 +33,8 @@ namespace api.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<CategoriaGetDto>> GetCategoria(int id)
         {
-            var resultado = await categoriaService.GetCategoriaByIdAsync(id, apenasAtiva: true).ConfigureAwait(false);
+            bool isUserAdmin = User.IsInRole("SuperAdministrador") || User.IsInRole("Administrador");
+            var resultado = await categoriaService.GetCategoriaByIdAsync(id, apenasAtiva: !isUserAdmin).ConfigureAwait(false);
 
             if (!resultado.Success)
                 return NotFound(new { message = resultado.Error });
@@ -102,9 +103,9 @@ namespace api.Controllers
 
         [Authorize(Roles = "SuperAdministrador,Administrador")]
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteCategoria(int id)
+        public async Task<IActionResult> DeleteCategoria(int id, [FromQuery] bool hardDelete = true)
         {
-            var resultado = await categoriaService.DeleteCategoriaAsync(id).ConfigureAwait(false);
+            var resultado = await categoriaService.DeleteCategoriaAsync(id, hardDelete).ConfigureAwait(false);
 
             if (!resultado.Success)
                 return BadRequest(new { message = resultado.Error });

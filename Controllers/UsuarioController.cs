@@ -154,5 +154,33 @@ namespace api.Controllers
 
             return Ok(new { message = resultado.Data });
         }
+
+        [Authorize]
+        [HttpDelete("conta")]
+        public async Task<IActionResult> DeleteSelfAccount([FromBody] UsuarioDeleteSelfDto deleteDto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized(new { message = "Usuário não autenticado." });
+            }
+
+            var resultado = await usuarioService.DeleteSelfAccountAsync(userId, deleteDto.Senha).ConfigureAwait(false);
+
+            if (!resultado.Success)
+            {
+                return BadRequest(new { message = resultado.Error });
+            }
+
+            RemoverRefreshTokenCookie();
+
+            return Ok(new { message = resultado.Data });
+        }
     }
 }

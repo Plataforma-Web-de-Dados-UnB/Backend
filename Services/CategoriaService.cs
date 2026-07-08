@@ -131,7 +131,7 @@ namespace api.Services
             return Resultado<CategoriaGetDto>.Ok(ToGetDto(categoria, qtd, baseUrl));
         }
 
-        public async Task<Resultado<string>> DeleteCategoriaAsync(int id)
+        public async Task<Resultado<string>> DeleteCategoriaAsync(int id, bool hardDelete = false)
         {
             var categoria = await _context.Categorias.Include(c => c.Paineis)
                 .FirstOrDefaultAsync(c => c.Id == id).ConfigureAwait(false);
@@ -139,14 +139,26 @@ namespace api.Services
             if (categoria == null)
                 return Resultado<string>.Falha("Categoria não encontrada.");
 
-            if (categoria.Paineis.Count != 0)
-                return Resultado<string>.Falha("Não é possível excluir uma categoria que possui painéis vinculados.");
+            if (hardDelete)
+            {
+                if (categoria.Paineis.Count != 0)
+                    return Resultado<string>.Falha("Não é possível excluir permanentemente uma categoria que possui painéis vinculados.");
 
-            DeletarImagem(categoria.ImagemPath);
-            _context.Categorias.Remove(categoria);
-            await _context.SaveChangesAsync().ConfigureAwait(false);
+                DeletarImagem(categoria.ImagemPath);
+                _context.Categorias.Remove(categoria);
+                await _context.SaveChangesAsync().ConfigureAwait(false);
 
-            return Resultado<string>.Ok("Categoria excluída com sucesso.");
+                return Resultado<string>.Ok("Categoria excluída permanentemente com sucesso.");
+            }
+            else
+            {
+                categoria.Active = false;
+                categoria.DeactivatedAt = DateTime.UtcNow;
+                categoria.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync().ConfigureAwait(false);
+
+                return Resultado<string>.Ok("Categoria desativada com sucesso.");
+            }
         }
 
         public async Task<Resultado<string>> ToggleActiveAsync(int id)

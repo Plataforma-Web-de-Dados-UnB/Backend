@@ -9,7 +9,7 @@ namespace api.Services.Interfaces
         Task<Resultado<CategoriaGetDto>> GetCategoriaByIdAsync(int id, bool apenasAtiva = false);
         Task<Resultado<CategoriaGetDto>> CreateCategoriaAsync(CategoriaCreateDto dto, string baseUrl);
         Task<Resultado<CategoriaGetDto>> UpdateCategoriaAsync(int id, CategoriaUpdateDto dto, string baseUrl);
-        Task<Resultado<string>> DeleteCategoriaAsync(int id);
+        Task<Resultado<string>> DeleteCategoriaAsync(int id, bool hardDelete = false);
         Task<Resultado<string>> ToggleActiveAsync(int id);
     }
 }

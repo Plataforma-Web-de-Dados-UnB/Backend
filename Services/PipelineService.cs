@@ -11,12 +11,15 @@ namespace api.Services
     {
         private readonly AppDbContext _context = context;
 
-        public async Task<ResultadoPaginado<PipelineListDto>> GetPipelinesAsync(string? busca, int page, int limit)
+        public async Task<ResultadoPaginado<PipelineListDto>> GetPipelinesAsync(string? busca, bool? ativo, int page, int limit)
         {
             if (page < 1) page = 1;
             if (limit < 1) limit = 1;
 
-            var query = _context.Pipelines.AsQueryable();
+            var query = _context.Pipelines.IgnoreQueryFilters().AsQueryable();
+
+            if (ativo.HasValue)
+                query = query.Where(p => p.Ativo == ativo.Value);
 
             if (!string.IsNullOrWhiteSpace(busca))
                 query = query.Where(p => p.Nome.Contains(busca) || (p.Descricao != null && p.Descricao.Contains(busca)));
@@ -33,7 +36,8 @@ namespace api.Services
                     Nome = p.Nome,
                     Descricao = p.Descricao,
                     Ativo = p.Ativo,
-                    CreatedAt = p.CreatedAt
+                    CreatedAt = p.CreatedAt,
+                    UpdatedAt = p.UpdatedAt
                 })
                 .ToListAsync()
                 .ConfigureAwait(false);
@@ -44,6 +48,7 @@ namespace api.Services
         public async Task<Resultado<PipelineGetDto>> GetPipelineByIdAsync(int id)
         {
             var pipeline = await _context.Pipelines
+                .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(p => p.Id == id)
                 .ConfigureAwait(false);
 
@@ -74,6 +79,7 @@ namespace api.Services
         public async Task<Resultado<PipelineGetDto>> UpdatePipelineAsync(int id, PipelineUpdateDto dto)
         {
             var pipeline = await _context.Pipelines
+                .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(p => p.Id == id)
                 .ConfigureAwait(false);
 
@@ -90,20 +96,37 @@ namespace api.Services
             return Resultado<PipelineGetDto>.Ok(MapearGetDto(pipeline));
         }
 
-        public async Task<Resultado<string>> DeletePipelineAsync(int id)
+        public async Task<Resultado<string>> DeletePipelineAsync(int id, bool hardDelete = false)
         {
             var pipeline = await _context.Pipelines
+                .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(p => p.Id == id)
                 .ConfigureAwait(false);
 
             if (pipeline == null)
                 return Resultado<string>.Falha("Pipeline não encontrada.");
 
-            pipeline.Ativo = false;
-            pipeline.UpdatedAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync().ConfigureAwait(false);
+            if (hardDelete)
+            {
+                var execucoes = await _context.PipelineExecucoes
+                    .Where(e => e.PipelineId == id)
+                    .ToListAsync()
+                    .ConfigureAwait(false);
 
-            return Resultado<string>.Ok("Pipeline inativada com sucesso.");
+                _context.PipelineExecucoes.RemoveRange(execucoes);
+                _context.Pipelines.Remove(pipeline);
+                await _context.SaveChangesAsync().ConfigureAwait(false);
+
+                return Resultado<string>.Ok("Pipeline excluída permanentemente com sucesso.");
+            }
+            else
+            {
+                pipeline.Ativo = false;
+                pipeline.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync().ConfigureAwait(false);
+
+                return Resultado<string>.Ok("Pipeline desativada com sucesso.");
+            }
         }
 
         private static PipelineGetDto MapearGetDto(Pipeline pipeline) => new()
@@ -116,5 +139,23 @@ namespace api.Services
             CreatedAt = pipeline.CreatedAt,
             UpdatedAt = pipeline.UpdatedAt
         };
+
+        public async Task<Resultado<string>> ToggleActiveAsync(int id)
+        {
+            var pipeline = await _context.Pipelines
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(p => p.Id == id)
+                .ConfigureAwait(false);
+
+            if (pipeline == null)
+                return Resultado<string>.Falha("Pipeline não encontrada.");
+
+            pipeline.Ativo = !pipeline.Ativo;
+            pipeline.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync().ConfigureAwait(false);
+
+            string statusMsg = pipeline.Ativo ? "ativada" : "desativada";
+            return Resultado<string>.Ok($"Pipeline {statusMsg} com sucesso.");
+        }
     }
 }

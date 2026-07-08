@@ -313,5 +313,46 @@ namespace api.Services
 
             return Resultado<string>.Ok("Senha alterada com sucesso.");
         }
+
+        public async Task<Resultado<string>> DeleteSelfAccountAsync(string userId, string senha)
+        {
+            var usuario = await _userManager.FindByIdAsync(userId).ConfigureAwait(false);
+            if (usuario == null) return Resultado<string>.Falha("Usuário não encontrado.");
+
+            bool confirmacao = await _userManager.CheckPasswordAsync(usuario, senha).ConfigureAwait(false);
+            if (!confirmacao) return Resultado<string>.Falha("A senha informada está incorreta.");
+
+            if (usuario.Cargo == CargoUsuario.SuperAdministrador)
+            {
+                return Resultado<string>.Falha("Não é possível excluir a conta de um Super Administrador.");
+            }
+
+            var resultado = await _userManager.DeleteAsync(usuario).ConfigureAwait(false);
+            if (!resultado.Succeeded)
+            {
+                return Resultado<string>.Falha(resultado.Errors.FirstOrDefault()?.Description ?? "Erro ao excluir conta.");
+            }
+
+            return Resultado<string>.Ok("Conta excluída com sucesso.");
+        }
+
+        public async Task<Resultado<string>> DeleteUsuarioAsync(string id)
+        {
+            var usuario = await _userManager.FindByIdAsync(id).ConfigureAwait(false);
+            if (usuario == null) return Resultado<string>.Falha("Usuário não encontrado.");
+
+            if (usuario.Cargo == CargoUsuario.SuperAdministrador)
+            {
+                return Resultado<string>.Falha("Não é possível excluir a conta de um Super Administrador.");
+            }
+
+            var resultado = await _userManager.DeleteAsync(usuario).ConfigureAwait(false);
+            if (!resultado.Succeeded)
+            {
+                return Resultado<string>.Falha(resultado.Errors.FirstOrDefault()?.Description ?? "Erro ao excluir usuário.");
+            }
+
+            return Resultado<string>.Ok("Usuário excluído com sucesso.");
+        }
     }
 }
