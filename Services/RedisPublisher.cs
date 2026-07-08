@@ -41,6 +41,20 @@ namespace api.Services
             await db.ListLeftPushAsync(fila, envelope).ConfigureAwait(false);
         }
 
+        public async Task<bool> PingAsync()
+        {
+            try
+            {
+                var db = GetDatabase();
+                await db.PingAsync().ConfigureAwait(false);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         private string MontarEnvelopeKombu(string fila, object payload)
         {
             var taskId = Guid.NewGuid().ToString();

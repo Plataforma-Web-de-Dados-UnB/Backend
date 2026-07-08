@@ -25,9 +25,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowMultipleOrigins", policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.SetIsOriginAllowed(origin => true)
             .AllowAnyHeader()
-            .AllowAnyMethod();
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 
@@ -42,6 +43,7 @@ builder.Services.AddScoped<ISugestao, SugestaoService>();
 builder.Services.AddScoped<IPipeline, PipelineService>();
 builder.Services.AddScoped<IPipelineExecucao, PipelineExecucaoService>();
 builder.Services.AddScoped<ISupersetService, SupersetService>();
+builder.Services.AddScoped<IAdmin, AdminService>();
 builder.Services.AddSingleton<IRedisPublisher, RedisPublisher>();
 
 builder.Services.AddIdentity<Usuario, IdentityRole>()

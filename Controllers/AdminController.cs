@@ -9,10 +9,11 @@ namespace api.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    [Authorize(Roles = "SuperAdministrador")]
-    public class AdminController(IUsuario usuarioService) : ControllerBase
+    [Authorize(Roles = "SuperAdministrador,Administrador")]
+    public class AdminController(IUsuario usuarioService, IAdmin adminService) : ControllerBase
     {
         [HttpGet("usuarios")]
+        [Authorize(Roles = "SuperAdministrador")]
         public async Task<ActionResult<ResultadoPaginado<UsuarioListDto>>> GetUsuarios(
             [FromQuery] StatusUsuario? status,
             [FromQuery] CargoUsuario? cargo,
@@ -28,6 +29,7 @@ namespace api.Controllers
         }
 
         [HttpGet("usuarios/{id}")]
+        [Authorize(Roles = "SuperAdministrador")]
         public async Task<ActionResult<UsuarioGetDto>> GetUsuarioById(string id)
         {
             var usuario = await usuarioService.GetUsuarioByIdAsync(id).ConfigureAwait(false);
@@ -41,6 +43,7 @@ namespace api.Controllers
         }
 
         [HttpPut("usuarios/{id}/status")]
+        [Authorize(Roles = "SuperAdministrador")]
         public async Task<IActionResult> UpdateStatus(string id, [FromBody] UsuarioUpdateStatusDto statusDto)
         {
             if (!ModelState.IsValid)
@@ -56,6 +59,13 @@ namespace api.Controllers
             }
 
             return Ok(new { message = resultado.Data });
+        }
+
+        [HttpGet("kpis")]
+        public async Task<IActionResult> GetKpis()
+        {
+            var kpis = await adminService.GetKpisAsync().ConfigureAwait(false);
+            return Ok(kpis);
         }
     }
 }
