@@ -51,6 +51,7 @@ namespace api.Views
         public int SortOrdem { get; set; }
         public bool Active { get; set; }
         public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
         public int QuantidadePaineis { get; set; }
     }
 }

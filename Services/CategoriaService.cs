@@ -35,10 +35,11 @@ namespace api.Services
             SortOrdem = c.SortOrdem,
             Active = c.Active,
             CreatedAt = c.CreatedAt,
+            UpdatedAt = c.UpdatedAt,
             QuantidadePaineis = quantidadePaineis
         };
 
-        public async Task<ResultadoPaginado<CategoriaListDto>> GetCategoriasAsync(bool? active, string? busca, int page, int limit)
+        public async Task<ResultadoPaginado<CategoriaListDto>> GetCategoriasAsync(bool? active, string? busca, int page, int limit, string baseUrl)
         {
             var query = _context.Categorias.AsQueryable();
 
@@ -59,12 +60,12 @@ namespace api.Services
                 .ToListAsync()
                 .ConfigureAwait(false);
 
-            var dtos = itens.Select(c => ToListDto(c, c.Paineis.Count(p => p.Active), string.Empty)).ToList();
+            var dtos = itens.Select(c => ToListDto(c, c.Paineis.Count(p => p.Active), baseUrl)).ToList();
 
             return ResultadoPaginado<CategoriaListDto>.Ok(page, limit, totalItens, dtos);
         }
 
-        public async Task<Resultado<CategoriaGetDto>> GetCategoriaByIdAsync(int id, bool apenasAtiva = false)
+        public async Task<Resultado<CategoriaGetDto>> GetCategoriaByIdAsync(int id, string baseUrl, bool apenasAtiva = false)
         {
             var query = _context.Categorias.Include(c => c.Paineis).AsQueryable();
 
@@ -77,7 +78,7 @@ namespace api.Services
                 return Resultado<CategoriaGetDto>.Falha("Categoria não encontrada.");
 
             int qtd = categoria.Paineis.Count(p => p.Active);
-            return Resultado<CategoriaGetDto>.Ok(ToGetDto(categoria, qtd, string.Empty));
+            return Resultado<CategoriaGetDto>.Ok(ToGetDto(categoria, qtd, baseUrl));
         }
 
         public async Task<Resultado<CategoriaGetDto>> CreateCategoriaAsync(CategoriaCreateDto dto, string baseUrl)

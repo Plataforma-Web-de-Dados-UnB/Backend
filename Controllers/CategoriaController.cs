@@ -26,7 +26,7 @@ namespace api.Controllers
             if (page < 1) page = 1;
             if (limit < 1) limit = 1;
 
-            var resultado = await categoriaService.GetCategoriasAsync(true, busca, page, limit).ConfigureAwait(false);
+            var resultado = await categoriaService.GetCategoriasAsync(true, busca, page, limit, GetBaseUrl()).ConfigureAwait(false);
             return Ok(resultado);
         }
 
@@ -34,7 +34,7 @@ namespace api.Controllers
         public async Task<ActionResult<CategoriaGetDto>> GetCategoria(int id)
         {
             bool isUserAdmin = User.IsInRole("SuperAdministrador") || User.IsInRole("Administrador");
-            var resultado = await categoriaService.GetCategoriaByIdAsync(id, apenasAtiva: !isUserAdmin).ConfigureAwait(false);
+            var resultado = await categoriaService.GetCategoriaByIdAsync(id, GetBaseUrl(), apenasAtiva: !isUserAdmin).ConfigureAwait(false);
 
             if (!resultado.Success)
                 return NotFound(new { message = resultado.Error });
@@ -53,7 +53,7 @@ namespace api.Controllers
             if (page < 1) page = 1;
             if (limit < 1) limit = 1;
 
-            var resultado = await categoriaService.GetCategoriasAsync(active, busca, page, limit).ConfigureAwait(false);
+            var resultado = await categoriaService.GetCategoriasAsync(active, busca, page, limit, GetBaseUrl()).ConfigureAwait(false);
             return Ok(resultado);
         }
 
@@ -61,7 +61,7 @@ namespace api.Controllers
         [HttpGet("admin/{id}")]
         public async Task<ActionResult<CategoriaGetDto>> GetCategoriaAdmin(int id)
         {
-            var resultado = await categoriaService.GetCategoriaByIdAsync(id, apenasAtiva: false).ConfigureAwait(false);
+            var resultado = await categoriaService.GetCategoriaByIdAsync(id, GetBaseUrl(), apenasAtiva: false).ConfigureAwait(false);
 
             if (!resultado.Success)
                 return NotFound(new { message = resultado.Error });
