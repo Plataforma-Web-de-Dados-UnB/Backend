@@ -15,3 +15,6 @@ appsettings.*.json
 *.db
 *.db-shm
 *.db-wal
+
+# Dynamic user uploads
+wwwroot/uploads/
