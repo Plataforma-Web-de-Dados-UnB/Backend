@@ -22,7 +22,12 @@ namespace api.Services
                 query = query.Where(p => p.Ativo == ativo.Value);
 
             if (!string.IsNullOrWhiteSpace(busca))
-                query = query.Where(p => p.Nome.Contains(busca) || (p.Descricao != null && p.Descricao.Contains(busca)));
+            {
+                var searchPattern = $"%{StringHelper.RemoverAcentos(busca.Trim())}%";
+                query = query.Where(p =>
+                    EF.Functions.ILike(EF.Functions.Unaccent(p.Nome), searchPattern) ||
+                    (p.Descricao != null && EF.Functions.ILike(EF.Functions.Unaccent(p.Descricao), searchPattern)));
+            }
 
             var total = await query.CountAsync().ConfigureAwait(false);
 

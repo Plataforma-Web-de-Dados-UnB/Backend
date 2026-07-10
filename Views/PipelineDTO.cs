@@ -48,10 +48,19 @@ namespace api.Views
         public DateTime UpdatedAt { get; set; }
     }
 
+    public class ColunaSensivelDto
+    {
+        [Required]
+        public string Coluna { get; set; } = string.Empty;
+
+        [Required]
+        public string Estrategia { get; set; } = string.Empty;
+    }
+
     public class PipelineExecucaoCreateDto
     {
         [Required]
-        public Guid BatchId { get; set; }
+        public IFormFile Arquivo { get; set; } = null!;
 
         [Required]
         public int PipelineId { get; set; }
@@ -63,6 +72,8 @@ namespace api.Views
         [Required]
         [StringLength(255)]
         public string TabelaGold { get; set; } = string.Empty;
+
+        public string? ColunasSensiveisJson { get; set; }
     }
 
     public class PipelineExecucaoGetDto
@@ -90,19 +101,27 @@ namespace api.Views
         public string TabelaSilver { get; set; } = string.Empty;
         public string TabelaGold { get; set; } = string.Empty;
         public StatusPipelineExecucao Status { get; set; }
+        public string? Mensagem { get; set; }
+        public DateTime? IniciadoEm { get; set; }
         public DateTime? FinalizadoEm { get; set; }
         public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
     }
 
-    public class UploadRequestDto
+    public class PipelineExecucaoExecutarResultDto
     {
-        [Required]
-        public IFormFile Arquivo { get; set; } = null!;
-    }
-
-    public class UploadPreviewDto
-    {
+        public int Id { get; set; }
         public Guid BatchId { get; set; }
+        public int PipelineId { get; set; }
+        public string PipelineNome { get; set; } = string.Empty;
+        public string TabelaSilver { get; set; } = string.Empty;
+        public string TabelaGold { get; set; } = string.Empty;
+        public StatusPipelineExecucao Status { get; set; }
+        public string? Mensagem { get; set; }
+        public DateTime? IniciadoEm { get; set; }
+        public DateTime? FinalizadoEm { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
         public List<string> Colunas { get; set; } = [];
         public int TotalLinhas { get; set; }
         public List<Dictionary<string, string>> PrimeirasLinhas { get; set; } = [];

@@ -47,7 +47,12 @@ namespace api.Services
                 query = query.Where(c => c.Active == active.Value);
 
             if (!string.IsNullOrWhiteSpace(busca))
-                query = query.Where(c => c.Nome.Contains(busca) || (c.Descricao != null && c.Descricao.Contains(busca)));
+            {
+                var searchPattern = $"%{StringHelper.RemoverAcentos(busca.Trim())}%";
+                query = query.Where(c =>
+                    EF.Functions.ILike(EF.Functions.Unaccent(c.Nome), searchPattern) ||
+                    (c.Descricao != null && EF.Functions.ILike(EF.Functions.Unaccent(c.Descricao), searchPattern)));
+            }
 
             query = query.OrderBy(c => c.SortOrdem).ThenBy(c => c.Nome);
 

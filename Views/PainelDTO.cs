@@ -79,6 +79,7 @@ namespace api.Views
         public int SortOrdem { get; set; }
         public bool Active { get; set; }
         public DateTime CreatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
         public int CategoriaId { get; set; }
         public string CategoriaNome { get; set; } = string.Empty;
     }

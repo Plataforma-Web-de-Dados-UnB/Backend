@@ -17,13 +17,14 @@ namespace api.Controllers
         public async Task<ActionResult<ResultadoPaginado<PipelineExecucaoListDto>>> GetExecucoes(
             [FromQuery] int? pipelineId,
             [FromQuery] StatusPipelineExecucao? status,
+            [FromQuery] string? busca,
             [FromQuery] int page = 1,
             [FromQuery] int limit = 10)
         {
             if (page < 1) page = 1;
             if (limit < 1) limit = 1;
 
-            var resultado = await pipelineExecucaoService.GetExecucoesAsync(pipelineId, status, page, limit).ConfigureAwait(false);
+            var resultado = await pipelineExecucaoService.GetExecucoesAsync(pipelineId, status, busca, page, limit).ConfigureAwait(false);
             return Ok(resultado);
         }
 
@@ -39,12 +40,14 @@ namespace api.Controllers
         }
 
         [HttpPost("executar")]
-        public async Task<ActionResult<PipelineExecucaoGetDto>> Executar([FromBody] PipelineExecucaoCreateDto dto)
+        [Consumes("multipart/form-data")]
+        public async Task<ActionResult<PipelineExecucaoExecutarResultDto>> Executar([FromForm] PipelineExecucaoCreateDto dto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var resultado = await pipelineExecucaoService.ExecutarAsync(dto).ConfigureAwait(false);
+            var uploadedBy = User.FindFirstValue(ClaimTypes.Name) ?? "desconhecido";
+            var resultado = await pipelineExecucaoService.ExecutarAsync(dto, uploadedBy).ConfigureAwait(false);
 
             if (!resultado.Success)
                 return BadRequest(new { message = resultado.Error });
@@ -63,20 +66,5 @@ namespace api.Controllers
             return Ok(new { message = resultado.Data });
         }
 
-        [HttpPost("upload")]
-        [Consumes("multipart/form-data")]
-        public async Task<ActionResult<UploadPreviewDto>> Upload([FromForm] UploadRequestDto dto)
-        {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            var uploadedBy = User.FindFirstValue(ClaimTypes.Name) ?? "desconhecido";
-            var resultado = await pipelineExecucaoService.ProcessarUploadAsync(dto.Arquivo, uploadedBy).ConfigureAwait(false);
-
-            if (!resultado.Success)
-                return BadRequest(new { message = resultado.Error });
-
-            return Ok(resultado.Data);
-        }
     }
 }

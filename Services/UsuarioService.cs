@@ -242,10 +242,11 @@ namespace api.Services
 
             if (!string.IsNullOrWhiteSpace(busca))
             {
+                var searchPattern = $"%{StringHelper.RemoverAcentos(busca.Trim())}%";
                 query = query.Where(u =>
-                    u.Nome.Contains(busca) ||
-                    u.UltimoNome.Contains(busca) ||
-                    u.Email!.Contains(busca));
+                    EF.Functions.ILike(EF.Functions.Unaccent(u.Nome), searchPattern) ||
+                    EF.Functions.ILike(EF.Functions.Unaccent(u.UltimoNome), searchPattern) ||
+                    EF.Functions.ILike(EF.Functions.Unaccent(u.Email!), searchPattern));
             }
 
             query = query.OrderByDescending(u => u.CreatedAt);
@@ -267,7 +268,8 @@ namespace api.Services
                     Email = u.Email!,
                     Cargo = u.Cargo,
                     Status = u.Status,
-                    CreatedAt = u.CreatedAt
+                    CreatedAt = u.CreatedAt,
+                    UpdatedAt = u.UpdatedAt
                 }).ToList());
         }
 

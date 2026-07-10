@@ -29,10 +29,12 @@ namespace api.Services
             Id = s.Id,
             Tipo = s.Tipo,
             Titulo = s.Titulo,
+            Descricao = s.Descricao,
             NomeContato = s.NomeContato,
             EmailContato = s.EmailContato,
             Status = s.Status,
-            CreatedAt = s.CreatedAt
+            CreatedAt = s.CreatedAt,
+            UpdatedAt = s.UpdatedAt
         };
 
         public async Task<Resultado<string>> CreateSugestaoAsync(SugestaoCreateDto dto)
@@ -66,11 +68,14 @@ namespace api.Services
                 query = query.Where(s => s.Tipo == tipo.Value);
 
             if (!string.IsNullOrWhiteSpace(busca))
+            {
+                var searchPattern = $"%{StringHelper.RemoverAcentos(busca.Trim())}%";
                 query = query.Where(s =>
-                    s.Titulo.Contains(busca) ||
-                    s.Descricao.Contains(busca) ||
-                    (s.NomeContato != null && s.NomeContato.Contains(busca)) ||
-                    (s.EmailContato != null && s.EmailContato.Contains(busca)));
+                    EF.Functions.ILike(EF.Functions.Unaccent(s.Titulo), searchPattern) ||
+                    EF.Functions.ILike(EF.Functions.Unaccent(s.Descricao), searchPattern) ||
+                    (s.NomeContato != null && EF.Functions.ILike(EF.Functions.Unaccent(s.NomeContato), searchPattern)) ||
+                    (s.EmailContato != null && EF.Functions.ILike(EF.Functions.Unaccent(s.EmailContato), searchPattern)));
+            }
 
             query = query.OrderByDescending(s => s.CreatedAt);
 

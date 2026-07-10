@@ -37,6 +37,7 @@ namespace api.Services
             SortOrdem = p.SortOrdem,
             Active = p.Active,
             CreatedAt = p.CreatedAt,
+            UpdatedAt = p.UpdatedAt,
             CategoriaId = p.CategoriaId,
             CategoriaNome = p.Categoria?.Nome ?? string.Empty
         };
@@ -52,7 +53,12 @@ namespace api.Services
                 query = query.Where(p => p.CategoriaId == categoriaId.Value);
 
             if (!string.IsNullOrWhiteSpace(busca))
-                query = query.Where(p => p.Nome.Contains(busca) || (p.Descricao != null && p.Descricao.Contains(busca)));
+            {
+                var searchPattern = $"%{StringHelper.RemoverAcentos(busca.Trim())}%";
+                query = query.Where(p =>
+                    EF.Functions.ILike(EF.Functions.Unaccent(p.Nome), searchPattern) ||
+                    (p.Descricao != null && EF.Functions.ILike(EF.Functions.Unaccent(p.Descricao), searchPattern)));
+            }
 
             query = query.OrderBy(p => p.SortOrdem).ThenBy(p => p.Nome);
 

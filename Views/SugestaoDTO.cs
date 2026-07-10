@@ -51,9 +51,11 @@ namespace api.Views
         public int Id { get; set; }
         public TipoSugestao Tipo { get; set; }
         public string Titulo { get; set; } = string.Empty;
+        public string Descricao { get; set; } = string.Empty;
         public string? NomeContato { get; set; }
         public string? EmailContato { get; set; }
         public StatusSugestao Status { get; set; }
         public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
     }
 }
