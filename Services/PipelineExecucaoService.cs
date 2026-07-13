@@ -39,13 +39,27 @@ namespace api.Services
             if (status.HasValue)
                 query = query.Where(e => e.Status == status.Value);
 
+            List<Guid>? batchIdsPorArquivo = null;
+            Guid? batchIdBuscado = null;
             if (!string.IsNullOrWhiteSpace(busca))
             {
-                var termo = busca.ToLower();
+                var termo = busca!.ToLower();
+                _ = Guid.TryParse(termo, out var parsedBatchId);
+                batchIdBuscado = parsedBatchId;
+
+                batchIdsPorArquivo = await _context.BronzeUploadsAuditoria
+                    .Where(u => u.NomeArquivo.ToLower().Contains(termo))
+                    .Select(u => u.BatchId)
+                    .Distinct()
+                    .ToListAsync()
+                    .ConfigureAwait(false);
+
                 query = query.Where(e =>
                     e.Pipeline.Nome.ToLower().Contains(termo) ||
                     e.TabelaSilver.ToLower().Contains(termo) ||
-                    e.TabelaGold.ToLower().Contains(termo));
+                    e.TabelaGold.ToLower().Contains(termo) ||
+                    (batchIdBuscado.HasValue && e.BatchId == batchIdBuscado.Value) ||
+                    batchIdsPorArquivo.Contains(e.BatchId));
             }
 
             var total = await query.CountAsync().ConfigureAwait(false);
@@ -72,6 +86,17 @@ namespace api.Services
                 .ToListAsync()
                 .ConfigureAwait(false);
 
+            var batchIds = items.Select(i => i.BatchId).Distinct().ToList();
+            var nomesArquivos = await _context.BronzeUploadsAuditoria
+                .Where(u => batchIds.Contains(u.BatchId))
+                .ToDictionaryAsync(u => u.BatchId, u => u.NomeArquivo)
+                .ConfigureAwait(false);
+
+            foreach (var item in items)
+            {
+                item.NomeArquivo = nomesArquivos.GetValueOrDefault(item.BatchId);
+            }
+
             return ResultadoPaginado<PipelineExecucaoListDto>.Ok(page, limit, total, items);
         }
 
@@ -85,7 +110,13 @@ namespace api.Services
             if (execucao == null)
                 return Resultado<PipelineExecucaoGetDto>.Falha("Execução não encontrada.");
 
-            return Resultado<PipelineExecucaoGetDto>.Ok(MapearGetDto(execucao));
+            var nomeArquivo = await _context.BronzeUploadsAuditoria
+                .Where(u => u.BatchId == execucao.BatchId)
+                .Select(u => u.NomeArquivo)
+                .FirstOrDefaultAsync()
+                .ConfigureAwait(false);
+
+            return Resultado<PipelineExecucaoGetDto>.Ok(MapearGetDto(execucao, nomeArquivo));
         }
 
         public async Task<Resultado<PipelineExecucaoExecutarResultDto>> ExecutarAsync(PipelineExecucaoCreateDto dto, string uploadedBy)
@@ -115,13 +146,19 @@ namespace api.Services
 
             var fileHash = Convert.ToHexString(SHA256.HashData(conteudo)).ToLowerInvariant();
 
-            var existente = await _context.BronzeUploadsAuditoria
-                .FirstOrDefaultAsync(u => u.FileHash == fileHash)
+            var batchIdsComHash = await _context.BronzeUploadsAuditoria
+                .Where(u => u.FileHash == fileHash)
+                .Select(u => u.BatchId)
+                .ToListAsync()
                 .ConfigureAwait(false);
 
-            if (existente != null)
+            var existeSucesso = await _context.PipelineExecucoes
+                .AnyAsync(e => batchIdsComHash.Contains(e.BatchId) && e.Status == StatusPipelineExecucao.Sucesso)
+                .ConfigureAwait(false);
+
+            if (existeSucesso)
                 return Resultado<PipelineExecucaoExecutarResultDto>.Falha(
-                    $"Este arquivo já foi processado anteriormente (batch {existente.BatchId}, em {existente.CreatedAt:dd/MM/yyyy HH:mm}).");
+                    "Este arquivo já foi processado com sucesso anteriormente. Envie um arquivo diferente ou crie um novo pipeline.");
 
             List<ColunaSensivelDto>? colunasSensiveis = null;
             if (!string.IsNullOrWhiteSpace(dto.ColunasSensiveisJson))
@@ -324,9 +361,25 @@ namespace api.Services
                 return Resultado<string>.Falha("Rollback não pode ser executado enquanto a execução está pendente ou em processamento.");
 
             var batchIdStr = execucao.BatchId.ToString();
-            await _context.Database.ExecuteSqlRawAsync(
-                $"DELETE FROM silver.{execucao.TabelaSilver} WHERE batch_id::text = '{batchIdStr}'; DELETE FROM gold.{execucao.TabelaGold} WHERE batch_id::text = '{batchIdStr}'; DELETE FROM bronze.arquivos_brutos WHERE batch_id = '{batchIdStr}'")
-                .ConfigureAwait(false);
+            var sql = $"""
+                DO $$
+                BEGIN
+                    IF EXISTS (
+                        SELECT 1 FROM information_schema.tables
+                        WHERE table_schema = 'silver' AND table_name = '{execucao.TabelaSilver}'
+                    ) THEN
+                        EXECUTE format('DELETE FROM silver.%I WHERE batch_id::text = %L', '{execucao.TabelaSilver}', '{batchIdStr}');
+                    END IF;
+                    IF EXISTS (
+                        SELECT 1 FROM information_schema.tables
+                        WHERE table_schema = 'gold' AND table_name = '{execucao.TabelaGold}'
+                    ) THEN
+                        EXECUTE format('DELETE FROM gold.%I WHERE batch_id::text = %L', '{execucao.TabelaGold}', '{batchIdStr}');
+                    END IF;
+                END $$;
+                DELETE FROM bronze.arquivos_brutos WHERE batch_id = '{batchIdStr}';
+                """;
+            await _context.Database.ExecuteSqlRawAsync(sql).ConfigureAwait(false);
 
             execucao.Status = StatusPipelineExecucao.Rollback;
             execucao.Mensagem = "Rollback executado com sucesso.";
@@ -338,12 +391,13 @@ namespace api.Services
             return Resultado<string>.Ok("Rollback executado com sucesso.");
         }
 
-        private static PipelineExecucaoGetDto MapearGetDto(PipelineExecucao execucao) => new()
+        private static PipelineExecucaoGetDto MapearGetDto(PipelineExecucao execucao, string? nomeArquivo = null) => new()
         {
             Id = execucao.Id,
             BatchId = execucao.BatchId,
             PipelineId = execucao.PipelineId,
             PipelineNome = execucao.Pipeline?.Nome ?? string.Empty,
+            NomeArquivo = nomeArquivo,
             TabelaSilver = execucao.TabelaSilver,
             TabelaGold = execucao.TabelaGold,
             Status = execucao.Status,

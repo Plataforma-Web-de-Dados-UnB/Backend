@@ -52,3 +52,8 @@ public class SupersetLoginResponse
 {
     public string AccessToken { get; set; } = string.Empty;
 }
+
+public class SupersetSsoUrlResponseDto
+{
+    public string Url { get; set; } = string.Empty;
+}

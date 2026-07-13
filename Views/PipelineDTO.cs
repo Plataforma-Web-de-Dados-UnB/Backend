@@ -82,6 +82,7 @@ namespace api.Views
         public Guid BatchId { get; set; }
         public int PipelineId { get; set; }
         public string PipelineNome { get; set; } = string.Empty;
+        public string? NomeArquivo { get; set; }
         public string TabelaSilver { get; set; } = string.Empty;
         public string TabelaGold { get; set; } = string.Empty;
         public StatusPipelineExecucao Status { get; set; }
@@ -98,6 +99,7 @@ namespace api.Views
         public Guid BatchId { get; set; }
         public int PipelineId { get; set; }
         public string PipelineNome { get; set; } = string.Empty;
+        public string? NomeArquivo { get; set; }
         public string TabelaSilver { get; set; } = string.Empty;
         public string TabelaGold { get; set; } = string.Empty;
         public StatusPipelineExecucao Status { get; set; }

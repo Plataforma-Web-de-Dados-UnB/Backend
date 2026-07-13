@@ -16,14 +16,12 @@ namespace api.Views
         [Required(ErrorMessage = "A descrição é obrigatória.")]
         public string Descricao { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "O nome de contato é obrigatório.")]
         [StringLength(255, ErrorMessage = "O nome de contato deve ter no máximo 255 caracteres.")]
-        public string NomeContato { get; set; } = string.Empty;
+        public string? NomeContato { get; set; }
 
-        [Required(ErrorMessage = "O e-mail de contato é obrigatório.")]
         [EmailAddress(ErrorMessage = "O e-mail de contato informado não é válido.")]
         [StringLength(255, ErrorMessage = "O e-mail de contato deve ter no máximo 255 caracteres.")]
-        public string EmailContato { get; set; } = string.Empty;
+        public string? EmailContato { get; set; }
     }
 
     public class SugestaoUpdateStatusDto
