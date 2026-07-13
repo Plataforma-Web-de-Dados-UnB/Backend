@@ -15,6 +15,7 @@ namespace api.Data
         public DbSet<PipelineExecucao> PipelineExecucoes { get; set; } = null!;
         public DbSet<BronzeArquivoBruto> BronzeArquivosBrutos { get; set; } = null!;
         public DbSet<BronzeUploadAuditoria> BronzeUploadsAuditoria { get; set; } = null!;
+        public DbSet<PasswordResetToken> PasswordResetTokens { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -53,6 +54,16 @@ namespace api.Data
 
             builder.Entity<BronzeUploadAuditoria>()
                 .HasIndex(u => u.FileHash)
+                .IsUnique();
+
+            builder.Entity<PasswordResetToken>()
+                .HasOne(p => p.Usuario)
+                .WithMany()
+                .HasForeignKey(p => p.UsuarioId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<PasswordResetToken>()
+                .HasIndex(p => p.Token)
                 .IsUnique();
         }
     }

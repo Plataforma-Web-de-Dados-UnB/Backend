@@ -13,11 +13,12 @@ using api.Views;
 
 namespace api.Services
 {
-    public class UsuarioService(UserManager<Usuario> userManager, IConfiguration configuration, AppDbContext context) : IUsuario
+    public class UsuarioService(UserManager<Usuario> userManager, IConfiguration configuration, AppDbContext context, IEmailService emailService) : IUsuario
     {
         private readonly UserManager<Usuario> _userManager = userManager;
         private readonly IConfiguration _configuration = configuration;
         private readonly AppDbContext _context = context;
+        private readonly IEmailService _emailService = emailService;
 
         public async Task<Resultado<string>> RegisterAsync(UsuarioRegisterDto user)
         {
@@ -294,6 +295,12 @@ namespace api.Services
                 return Resultado<string>.Falha(resultado.Errors.FirstOrDefault()?.Description ?? "Erro ao atualizar status do usuário.");
             }
 
+            var nomeCompleto = $"{usuario.Nome} {usuario.UltimoNome}";
+            if (status == StatusUsuario.Ativo)
+                _ = _emailService.SendCadastroAprovadoAsync(usuario.Email!, nomeCompleto);
+            else if (status == StatusUsuario.Recusado)
+                _ = _emailService.SendCadastroRecusadoAsync(usuario.Email!, nomeCompleto);
+
             return Resultado<string>.Ok("Status atualizado com sucesso.");
         }
 
@@ -355,6 +362,56 @@ namespace api.Services
             }
 
             return Resultado<string>.Ok("Usuário excluído com sucesso.");
+        }
+
+        public async Task<Resultado<string>> SolicitarRecuperacaoSenhaAsync(string email)
+        {
+            var usuario = await _userManager.FindByEmailAsync(email).ConfigureAwait(false);
+
+            if (usuario != null && usuario.Status == StatusUsuario.Ativo)
+            {
+                var tokenEntry = new PasswordResetToken
+                {
+                    Token = Guid.NewGuid().ToString("N"),
+                    UsuarioId = usuario.Id,
+                    ExpiresAt = DateTime.UtcNow.AddMinutes(30),
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _context.PasswordResetTokens.Add(tokenEntry);
+                await _context.SaveChangesAsync().ConfigureAwait(false);
+
+                var frontendBaseUrl = _configuration["Email:FrontendBaseUrl"] ?? "http://localhost:5173";
+                var resetLink = $"{frontendBaseUrl}/redefinir-senha?token={tokenEntry.Token}";
+                var nomeCompleto = $"{usuario.Nome} {usuario.UltimoNome}";
+
+                _ = _emailService.SendRecuperacaoSenhaAsync(usuario.Email!, nomeCompleto, resetLink);
+            }
+
+            return Resultado<string>.Ok("Se este e-mail estiver cadastrado, você receberá um link para redefinição de senha.");
+        }
+
+        public async Task<Resultado<string>> RedefinirSenhaAsync(string token, string novaSenha)
+        {
+            var tokenEntry = await _context.PasswordResetTokens
+                .Include(t => t.Usuario)
+                .FirstOrDefaultAsync(t => t.Token == token)
+                .ConfigureAwait(false);
+
+            if (tokenEntry == null || tokenEntry.IsExpired || tokenEntry.IsUsed)
+                return Resultado<string>.Falha("Token inválido ou expirado. Solicite um novo link de redefinição.");
+
+            var resetToken = await _userManager.GeneratePasswordResetTokenAsync(tokenEntry.Usuario).ConfigureAwait(false);
+            var resultado = await _userManager.ResetPasswordAsync(tokenEntry.Usuario, resetToken, novaSenha).ConfigureAwait(false);
+
+            if (!resultado.Succeeded)
+                return Resultado<string>.Falha(resultado.Errors.FirstOrDefault()?.Description ?? "Erro ao redefinir senha.");
+
+            tokenEntry.UsedAt = DateTime.UtcNow;
+            tokenEntry.Usuario.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync().ConfigureAwait(false);
+
+            return Resultado<string>.Ok("Senha redefinida com sucesso. Você já pode fazer login com a nova senha.");
         }
     }
 }

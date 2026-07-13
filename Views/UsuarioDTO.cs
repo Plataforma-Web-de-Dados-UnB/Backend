@@ -97,4 +97,21 @@ namespace api.Views
         [Required(ErrorMessage = "O campo Senha é obrigatório para confirmar a exclusão.")]
         public string Senha { get; set; } = string.Empty;
     }
+
+    public class RecuperarSenhaDto
+    {
+        [Required(ErrorMessage = "O campo E-mail é obrigatório.")]
+        [EmailAddress(ErrorMessage = "O e-mail informado não é válido.")]
+        public string Email { get; set; } = string.Empty;
+    }
+
+    public class RedefinirSenhaDto
+    {
+        [Required(ErrorMessage = "O campo Token é obrigatório.")]
+        public string Token { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "O campo Nova Senha é obrigatório.")]
+        [StringLength(100, MinimumLength = 8, ErrorMessage = "A senha deve ter entre 8 e 100 caracteres.")]
+        public string NovaSenha { get; set; } = string.Empty;
+    }
 }

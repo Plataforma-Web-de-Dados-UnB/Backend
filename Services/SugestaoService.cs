@@ -7,9 +7,10 @@ using api.Views;
 
 namespace api.Services
 {
-    public class SugestaoService(AppDbContext context) : ISugestao
+    public class SugestaoService(AppDbContext context, IEmailService emailService) : ISugestao
     {
         private readonly AppDbContext _context = context;
+        private readonly IEmailService _emailService = emailService;
 
         private static SugestaoGetDto ToGetDto(Sugestao s) => new()
         {
@@ -111,6 +112,12 @@ namespace api.Services
             sugestao.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync().ConfigureAwait(false);
+
+            if (!string.IsNullOrWhiteSpace(sugestao.EmailContato) && dto.Status != StatusSugestao.Pendente)
+            {
+                var nome = sugestao.NomeContato ?? "Prezado(a)";
+                _ = _emailService.SendSugestaoAtualizadaAsync(sugestao.EmailContato, nome, sugestao.Titulo, dto.Status);
+            }
 
             return Resultado<string>.Ok("Status da sugestão atualizado com sucesso.");
         }

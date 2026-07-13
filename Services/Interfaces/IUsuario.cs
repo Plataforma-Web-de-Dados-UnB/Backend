@@ -17,5 +17,7 @@ namespace api.Services.Interfaces
         Task<Resultado<string>> ChangePasswordAsync(string userId, UsuarioChangePasswordDto passwordDto);
         Task<Resultado<string>> DeleteSelfAccountAsync(string userId, string senha);
         Task<Resultado<string>> DeleteUsuarioAsync(string id);
+        Task<Resultado<string>> SolicitarRecuperacaoSenhaAsync(string email);
+        Task<Resultado<string>> RedefinirSenhaAsync(string token, string novaSenha);
     }
 }

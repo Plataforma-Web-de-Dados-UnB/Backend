@@ -155,6 +155,31 @@ namespace api.Controllers
             return Ok(new { message = resultado.Data });
         }
 
+        [HttpPost("recuperar-senha")]
+        public async Task<IActionResult> RecuperarSenha([FromBody] RecuperarSenhaDto dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var resultado = await usuarioService.SolicitarRecuperacaoSenhaAsync(dto.Email).ConfigureAwait(false);
+
+            return Ok(new { message = resultado.Data });
+        }
+
+        [HttpPost("redefinir-senha")]
+        public async Task<IActionResult> RedefinirSenha([FromBody] RedefinirSenhaDto dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var resultado = await usuarioService.RedefinirSenhaAsync(dto.Token, dto.NovaSenha).ConfigureAwait(false);
+
+            if (!resultado.Success)
+                return BadRequest(new { message = resultado.Error });
+
+            return Ok(new { message = resultado.Data });
+        }
+
         [Authorize]
         [HttpDelete("conta")]
         public async Task<IActionResult> DeleteSelfAccount([FromBody] UsuarioDeleteSelfDto deleteDto)
