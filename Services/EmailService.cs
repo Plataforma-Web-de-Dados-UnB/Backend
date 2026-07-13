@@ -28,14 +28,15 @@ namespace api.Services
             var port = int.TryParse(_configuration["Email:SmtpPort"], out var p) ? p : 587;
             var username = _configuration["Email:Username"];
             var password = _configuration["Email:Password"];
-            var fromAddress = _configuration["Email:FromAddress"] ?? username;
-            var fromName = _configuration["Email:FromName"] ?? "Portal de Dados UnB";
 
             if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
             {
                 _logger.LogWarning("Email não enviado: credenciais SMTP não configuradas.");
                 return;
             }
+
+            var fromAddress = _configuration["Email:FromAddress"] ?? username;
+            var fromName = _configuration["Email:FromName"] ?? "Portal de Dados UnB";
 
             var message = new MimeMessage();
             message.From.Add(new MailboxAddress(fromName, fromAddress));
@@ -60,11 +61,13 @@ namespace api.Services
 
         public async Task SendCadastroAprovadoAsync(string email, string nome)
         {
+            var portalUrl = _configuration["Email:FrontendBaseUrl"] ?? "http://localhost:5173";
             var template = await LoadTemplateAsync("CadastroAprovado.html").ConfigureAwait(false);
             var html = template
                 .Replace("{{NOME}}", nome)
-                .Replace("{{EMAIL}}", email);
-            await SendAsync(email, nome, "Cadastro Aprovado — Portal de Dados UnB", html).ConfigureAwait(false);
+                .Replace("{{EMAIL}}", email)
+                .Replace("{{PORTAL_URL}}", portalUrl);
+            await SendAsync(email, nome, "Cadastro Aprovado - Portal de Dados Institucionais", html).ConfigureAwait(false);
         }
 
         public async Task SendCadastroRecusadoAsync(string email, string nome)
@@ -73,7 +76,7 @@ namespace api.Services
             var html = template
                 .Replace("{{NOME}}", nome)
                 .Replace("{{EMAIL}}", email);
-            await SendAsync(email, nome, "Atualização de Cadastro — Portal de Dados UnB", html).ConfigureAwait(false);
+            await SendAsync(email, nome, "Atualização de Cadastro - Portal de Dados Institucionais", html).ConfigureAwait(false);
         }
 
         public async Task SendSugestaoAtualizadaAsync(string email, string nomeContato, string tituloSugestao, StatusSugestao status)
@@ -85,11 +88,18 @@ namespace api.Services
                 StatusSugestao.Descartado => "Descartada",
                 _ => status.ToString()
             };
+            var statusCor = status switch
+            {
+                StatusSugestao.Analisado => "#009c3b",
+                StatusSugestao.Descartado => "#dc2626",
+                _ => "#374151"
+            };
+            var statusBadge = $"<p style=\"margin:0;font-size:14px;font-weight:700;color:{statusCor};\">{statusTexto}</p>";
             var html = template
                 .Replace("{{NOME}}", nomeContato)
                 .Replace("{{TITULO_SUGESTAO}}", tituloSugestao)
-                .Replace("{{STATUS}}", statusTexto);
-            await SendAsync(email, nomeContato, $"Sua sugestão foi {statusTexto.ToLower()} — Portal de Dados UnB", html).ConfigureAwait(false);
+                .Replace("{{STATUS_BADGE}}", statusBadge);
+            await SendAsync(email, nomeContato, $"Sua sugestão foi {statusTexto.ToLower()} - Portal de Dados Institucionais", html).ConfigureAwait(false);
         }
 
         public async Task SendRecuperacaoSenhaAsync(string email, string nome, string resetLink)
@@ -98,7 +108,7 @@ namespace api.Services
             var html = template
                 .Replace("{{NOME}}", nome)
                 .Replace("{{RESET_LINK}}", resetLink);
-            await SendAsync(email, nome, "Redefinição de Senha — Portal de Dados UnB", html).ConfigureAwait(false);
+            await SendAsync(email, nome, "Redefinição de Senha - Portal de Dados Institucionais", html).ConfigureAwait(false);
         }
     }
 }

@@ -108,27 +108,34 @@ using (var scope = app.Services.CreateScope())
     
     var userManager = services.GetRequiredService<UserManager<Usuario>>();
 
-    var superAdmin = await userManager.FindByEmailAsync("admin@unb.br");
-    if (superAdmin == null)
+    var configuration = services.GetRequiredService<IConfiguration>();
+    var adminEmail = configuration["SuperAdmin:Email"] ?? "";
+    var adminPassword = configuration["SuperAdmin:Password"] ?? "";
+
+    if (!string.IsNullOrWhiteSpace(adminEmail) && !string.IsNullOrWhiteSpace(adminPassword))
     {
-        var admin = new Usuario
+        var superAdmin = await userManager.FindByEmailAsync(adminEmail);
+        if (superAdmin == null)
         {
-            UserName = "admin@unb.br",
-            Email = "admin@unb.br",
-            Nome = "Super",
-            UltimoNome = "Administrador",
-            Cargo = CargoUsuario.SuperAdministrador,
-            Status = StatusUsuario.Ativo,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-            EmailConfirmed = true
-        };
+            var admin = new Usuario
+            {
+                UserName = adminEmail,
+                Email = adminEmail,
+                Nome = "Admin",
+                UltimoNome = "Principal",
+                Cargo = CargoUsuario.SuperAdministrador,
+                Status = StatusUsuario.Ativo,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                EmailConfirmed = true
+            };
 
-        var result = await userManager.CreateAsync(admin, "Admin123!");
+            var result = await userManager.CreateAsync(admin, adminPassword);
 
-        if (!result.Succeeded)
-        {
-            throw new Exception("Erro ao criar Super Administrador: " + string.Join(", ", result.Errors.Select(e => e.Description)));
+            if (!result.Succeeded)
+            {
+                throw new Exception("Erro ao criar Super Administrador: " + string.Join(", ", result.Errors.Select(e => e.Description)));
+            }
         }
     }
 }
