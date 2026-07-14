@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using CsvHelper;
 using CsvHelper.Configuration;
 using ClosedXML.Excel;
@@ -76,6 +77,9 @@ namespace api.Services
                     PipelineNome = e.Pipeline.Nome,
                     TabelaSilver = e.TabelaSilver,
                     TabelaGold = e.TabelaGold,
+                    TabelasGoldExtras = e.TabelasGoldExtras != null
+                        ? JsonSerializer.Deserialize<List<string>>(e.TabelasGoldExtras)
+                        : null,
                     Status = e.Status,
                     Mensagem = e.Mensagem,
                     IniciadoEm = e.IniciadoEm,
@@ -137,6 +141,9 @@ namespace api.Services
             if (pipeline == null)
                 return Resultado<PipelineExecucaoExecutarResultDto>.Falha("Pipeline não encontrada.");
 
+            if (!pipeline.Ativo)
+                return Resultado<PipelineExecucaoExecutarResultDto>.Falha("Pipeline desativada. Ative-a antes de executar.");
+
             byte[] conteudo;
             using (var ms = new MemoryStream())
             {
@@ -153,12 +160,22 @@ namespace api.Services
                 .ConfigureAwait(false);
 
             var existeSucesso = await _context.PipelineExecucoes
-                .AnyAsync(e => batchIdsComHash.Contains(e.BatchId) && e.Status == StatusPipelineExecucao.Sucesso)
+                .AnyAsync(e => batchIdsComHash.Contains(e.BatchId)
+                            && e.PipelineId == dto.PipelineId
+                            && e.Status == StatusPipelineExecucao.Sucesso)
                 .ConfigureAwait(false);
 
             if (existeSucesso)
                 return Resultado<PipelineExecucaoExecutarResultDto>.Falha(
-                    "Este arquivo já foi processado com sucesso anteriormente. Envie um arquivo diferente ou crie um novo pipeline.");
+                    "Este arquivo já foi processado com sucesso por esta pipeline. Envie um arquivo diferente ou use outra pipeline.");
+
+            if (!Regex.IsMatch(dto.TabelaSilver, @"^[a-z_][a-z0-9_]{0,62}$"))
+                return Resultado<PipelineExecucaoExecutarResultDto>.Falha(
+                    "Nome da tabela prata inválido. Use apenas letras minúsculas, números e _. Deve começar com letra ou _.");
+
+            if (!Regex.IsMatch(dto.TabelaGold, @"^[a-z_][a-z0-9_]{0,62}$"))
+                return Resultado<PipelineExecucaoExecutarResultDto>.Falha(
+                    "Nome da tabela ouro inválido. Use apenas letras minúsculas, números e _. Deve começar com letra ou _.");
 
             List<ColunaSensivelDto>? colunasSensiveis = null;
             if (!string.IsNullOrWhiteSpace(dto.ColunasSensiveisJson))
@@ -188,7 +205,7 @@ namespace api.Services
                 using var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture)
                 {
                     HasHeaderRecord = true,
-                    Delimiter = ";"
+                    Delimiter = DetectarDelimitador(conteudo)
                 });
 
                 var records = csv.GetRecords<dynamic>().ToList();
@@ -312,6 +329,12 @@ namespace api.Services
             });
         }
 
+        private static string DetectarDelimitador(byte[] conteudo)
+        {
+            var primeiraLinha = new StreamReader(new MemoryStream(conteudo)).ReadLine() ?? "";
+            return primeiraLinha.Count(c => c == ';') >= primeiraLinha.Count(c => c == ',') ? ";" : ",";
+        }
+
         private static bool EhSuprimida(string coluna, List<ColunaSensivelDto>? colunasSensiveis)
         {
             if (colunasSensiveis == null) return false;
@@ -361,6 +384,20 @@ namespace api.Services
                 return Resultado<string>.Falha("Rollback não pode ser executado enquanto a execução está pendente ou em processamento.");
 
             var batchIdStr = execucao.BatchId.ToString();
+            var extras = DeserializarGoldExtras(execucao.TabelasGoldExtras)
+                ?.Where(t => !string.Equals(t, execucao.TabelaGold, StringComparison.OrdinalIgnoreCase))
+                .ToList() ?? [];
+
+            var extraGoldDeletes = string.Concat(extras.Select(t => $"""
+
+                    IF EXISTS (
+                        SELECT 1 FROM information_schema.tables
+                        WHERE table_schema = 'gold' AND table_name = '{t}'
+                    ) THEN
+                        EXECUTE format('DELETE FROM gold.%I WHERE batch_id::text = %L', '{t}', '{batchIdStr}');
+                    END IF;
+                """));
+
             var sql = $"""
                 DO $$
                 BEGIN
@@ -375,11 +412,17 @@ namespace api.Services
                         WHERE table_schema = 'gold' AND table_name = '{execucao.TabelaGold}'
                     ) THEN
                         EXECUTE format('DELETE FROM gold.%I WHERE batch_id::text = %L', '{execucao.TabelaGold}', '{batchIdStr}');
-                    END IF;
+                    END IF;{extraGoldDeletes}
                 END $$;
                 DELETE FROM bronze.arquivos_brutos WHERE batch_id = '{batchIdStr}';
                 """;
             await _context.Database.ExecuteSqlRawAsync(sql).ConfigureAwait(false);
+
+            var auditoria = await _context.BronzeUploadsAuditoria
+                .FirstOrDefaultAsync(u => u.BatchId == execucao.BatchId)
+                .ConfigureAwait(false);
+            if (auditoria != null)
+                _context.BronzeUploadsAuditoria.Remove(auditoria);
 
             execucao.Status = StatusPipelineExecucao.Rollback;
             execucao.Mensagem = "Rollback executado com sucesso.";
@@ -391,6 +434,13 @@ namespace api.Services
             return Resultado<string>.Ok("Rollback executado com sucesso.");
         }
 
+        private static List<string>? DeserializarGoldExtras(string? json)
+        {
+            if (string.IsNullOrWhiteSpace(json)) return null;
+            try { return JsonSerializer.Deserialize<List<string>>(json); }
+            catch { return null; }
+        }
+
         private static PipelineExecucaoGetDto MapearGetDto(PipelineExecucao execucao, string? nomeArquivo = null) => new()
         {
             Id = execucao.Id,
@@ -400,6 +450,7 @@ namespace api.Services
             NomeArquivo = nomeArquivo,
             TabelaSilver = execucao.TabelaSilver,
             TabelaGold = execucao.TabelaGold,
+            TabelasGoldExtras = DeserializarGoldExtras(execucao.TabelasGoldExtras),
             Status = execucao.Status,
             Mensagem = execucao.Mensagem,
             IniciadoEm = execucao.IniciadoEm,

@@ -465,6 +465,10 @@ namespace api.Migrations
                         .HasColumnType("character varying(255)")
                         .HasColumnName("tabela_gold");
 
+                    b.Property<string>("TabelasGoldExtras")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("tabelas_gold_extras");
+
                     b.Property<string>("TabelaSilver")
                         .IsRequired()
                         .HasMaxLength(255)

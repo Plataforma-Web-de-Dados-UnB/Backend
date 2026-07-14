@@ -85,6 +85,7 @@ namespace api.Views
         public string? NomeArquivo { get; set; }
         public string TabelaSilver { get; set; } = string.Empty;
         public string TabelaGold { get; set; } = string.Empty;
+        public List<string>? TabelasGoldExtras { get; set; }
         public StatusPipelineExecucao Status { get; set; }
         public string? Mensagem { get; set; }
         public DateTime? IniciadoEm { get; set; }
@@ -102,6 +103,7 @@ namespace api.Views
         public string? NomeArquivo { get; set; }
         public string TabelaSilver { get; set; } = string.Empty;
         public string TabelaGold { get; set; } = string.Empty;
+        public List<string>? TabelasGoldExtras { get; set; }
         public StatusPipelineExecucao Status { get; set; }
         public string? Mensagem { get; set; }
         public DateTime? IniciadoEm { get; set; }

@@ -85,6 +85,9 @@ public class PipelineExecucao
     [Column("finalizado_em")]
     public DateTime? FinalizadoEm { get; set; }
 
+    [Column("tabelas_gold_extras", TypeName = "jsonb")]
+    public string? TabelasGoldExtras { get; set; }
+
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
