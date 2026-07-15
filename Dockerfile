@@ -16,7 +16,7 @@ COPY . .
 
 WORKDIR "/src/Backend/"
 
-CMD ["dotnet", "watch", "run", "--urls", "http://0.0.0.0:5042"]
+CMD ["dotnet", "run", "--urls", "http://0.0.0.0:5042"]
 
 FROM dev AS test
 CMD ["sh", "-c", "dotnet test --list-tests && dotnet test -l \"console;verbosity=normal\" -- RunConfiguration.TreatNoTestsAsError=true"]
