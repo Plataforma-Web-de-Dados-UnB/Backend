@@ -79,6 +79,7 @@ namespace api.Services
                     TabelaGold = e.TabelaGold,
                     TabelasGoldExtras = e.TabelasGoldExtras != null
                         ? JsonSerializer.Deserialize<List<string>>(e.TabelasGoldExtras)
+                            !.Where(t => t != e.TabelaGold).ToList()
                         : null,
                     Status = e.Status,
                     Mensagem = e.Mensagem,
@@ -450,7 +451,8 @@ namespace api.Services
             NomeArquivo = nomeArquivo,
             TabelaSilver = execucao.TabelaSilver,
             TabelaGold = execucao.TabelaGold,
-            TabelasGoldExtras = DeserializarGoldExtras(execucao.TabelasGoldExtras),
+            TabelasGoldExtras = DeserializarGoldExtras(execucao.TabelasGoldExtras)
+                ?.Where(t => t != execucao.TabelaGold).ToList(),
             Status = execucao.Status,
             Mensagem = execucao.Mensagem,
             IniciadoEm = execucao.IniciadoEm,

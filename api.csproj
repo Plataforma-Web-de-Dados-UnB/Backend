@@ -5,6 +5,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RazorLangVersion>Latest</RazorLangVersion>
+    <Version>1.0.0</Version>
+    <AssemblyName>PlataformaWebDadosUnB</AssemblyName>
+    <Product>Plataforma Web de Dados Institucionais - UnB | FCTE</Product>
   </PropertyGroup>
 
   <ItemGroup>
