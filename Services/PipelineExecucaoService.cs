@@ -65,10 +65,14 @@ namespace api.Services
 
             var total = await query.CountAsync().ConfigureAwait(false);
 
-            var items = await query
+            var execucoes = await query
                 .OrderByDescending(e => e.CreatedAt)
                 .Skip((page - 1) * limit)
                 .Take(limit)
+                .ToListAsync()
+                .ConfigureAwait(false);
+
+            var items = execucoes
                 .Select(e => new PipelineExecucaoListDto
                 {
                     Id = e.Id,
@@ -77,10 +81,8 @@ namespace api.Services
                     PipelineNome = e.Pipeline.Nome,
                     TabelaSilver = e.TabelaSilver,
                     TabelaGold = e.TabelaGold,
-                    TabelasGoldExtras = e.TabelasGoldExtras != null
-                        ? JsonSerializer.Deserialize<List<string>>(e.TabelasGoldExtras)
-                            !.Where(t => t != e.TabelaGold).ToList()
-                        : null,
+                    TabelasGoldExtras = DeserializarGoldExtras(e.TabelasGoldExtras)
+                        ?.Where(t => t != e.TabelaGold).ToList(),
                     Status = e.Status,
                     Mensagem = e.Mensagem,
                     IniciadoEm = e.IniciadoEm,
@@ -88,8 +90,7 @@ namespace api.Services
                     CreatedAt = e.CreatedAt,
                     UpdatedAt = e.UpdatedAt
                 })
-                .ToListAsync()
-                .ConfigureAwait(false);
+                .ToList();
 
             var batchIds = items.Select(i => i.BatchId).Distinct().ToList();
             var nomesArquivos = await _context.BronzeUploadsAuditoria
