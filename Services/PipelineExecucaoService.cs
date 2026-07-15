@@ -155,11 +155,12 @@ namespace api.Services
 
             var fileHash = Convert.ToHexString(SHA256.HashData(conteudo)).ToLowerInvariant();
 
-            var batchIdsComHash = await _context.BronzeUploadsAuditoria
+            var auditoriaExistentes = await _context.BronzeUploadsAuditoria
                 .Where(u => u.FileHash == fileHash)
-                .Select(u => u.BatchId)
                 .ToListAsync()
                 .ConfigureAwait(false);
+
+            var batchIdsComHash = auditoriaExistentes.Select(u => u.BatchId).ToList();
 
             var existeSucesso = await _context.PipelineExecucoes
                 .AnyAsync(e => batchIdsComHash.Contains(e.BatchId)
@@ -170,6 +171,20 @@ namespace api.Services
             if (existeSucesso)
                 return Resultado<PipelineExecucaoExecutarResultDto>.Falha(
                     "Este arquivo já foi processado com sucesso por esta pipeline. Envie um arquivo diferente ou use outra pipeline.");
+
+            // Remove registros órfãos de uploads anteriores que não resultaram em sucesso
+            // (ex: execuções com Erro ou Rollback), evitando violação de unique constraint ao re-enviar.
+            if (auditoriaExistentes.Count > 0)
+            {
+                var batchIdsOrfaos = auditoriaExistentes.Select(u => u.BatchId).ToList();
+                var bronzeOrfaos = await _context.BronzeArquivosBrutos
+                    .Where(b => batchIdsOrfaos.Contains(b.BatchId))
+                    .ToListAsync()
+                    .ConfigureAwait(false);
+                _context.BronzeArquivosBrutos.RemoveRange(bronzeOrfaos);
+                _context.BronzeUploadsAuditoria.RemoveRange(auditoriaExistentes);
+                await _context.SaveChangesAsync().ConfigureAwait(false);
+            }
 
             if (!Regex.IsMatch(dto.TabelaSilver, @"^[a-z_][a-z0-9_]{0,62}$"))
                 return Resultado<PipelineExecucaoExecutarResultDto>.Falha(
@@ -390,15 +405,49 @@ namespace api.Services
                 ?.Where(t => !string.Equals(t, execucao.TabelaGold, StringComparison.OrdinalIgnoreCase))
                 .ToList() ?? [];
 
-            var extraGoldDeletes = string.Concat(extras.Select(t => $"""
+            // Se nenhuma outra execução bem-sucedida usa a mesma tabela, dropa-a por completo.
+            // Caso contrário, apenas remove os dados do batch para preservar outros batches.
+            var outrasSilver = await _context.PipelineExecucoes
+                .AnyAsync(e => e.Id != id
+                            && e.TabelaSilver == execucao.TabelaSilver
+                            && e.Status == StatusPipelineExecucao.Sucesso)
+                .ConfigureAwait(false);
+
+            var outrasGold = await _context.PipelineExecucoes
+                .AnyAsync(e => e.Id != id
+                            && e.TabelaGold == execucao.TabelaGold
+                            && e.Status == StatusPipelineExecucao.Sucesso)
+                .ConfigureAwait(false);
+
+            var silverBlock = outrasSilver
+                ? $"EXECUTE format('DELETE FROM silver.%I WHERE batch_id::text = %L', '{execucao.TabelaSilver}', '{batchIdStr}');"
+                : $"EXECUTE format('DROP TABLE IF EXISTS silver.%I', '{execucao.TabelaSilver}');";
+
+            var goldBlock = outrasGold
+                ? $"EXECUTE format('DELETE FROM gold.%I WHERE batch_id::text = %L', '{execucao.TabelaGold}', '{batchIdStr}');"
+                : $"EXECUTE format('DROP TABLE IF EXISTS gold.%I', '{execucao.TabelaGold}');";
+
+            var extraGoldBlocks = string.Concat(extras.Select(t =>
+            {
+                var outrasExtra = _context.PipelineExecucoes
+                    .Any(e => e.Id != id
+                           && (e.TabelaGold == t || (e.TabelasGoldExtras != null && e.TabelasGoldExtras.Contains(t)))
+                           && e.Status == StatusPipelineExecucao.Sucesso);
+
+                var stmt = outrasExtra
+                    ? $"EXECUTE format('DELETE FROM gold.%I WHERE batch_id::text = %L', '{t}', '{batchIdStr}');"
+                    : $"EXECUTE format('DROP TABLE IF EXISTS gold.%I', '{t}');";
+
+                return $"""
 
                     IF EXISTS (
                         SELECT 1 FROM information_schema.tables
                         WHERE table_schema = 'gold' AND table_name = '{t}'
                     ) THEN
-                        EXECUTE format('DELETE FROM gold.%I WHERE batch_id::text = %L', '{t}', '{batchIdStr}');
+                        {stmt}
                     END IF;
-                """));
+                """;
+            }));
 
             var sql = $"""
                 DO $$
@@ -407,14 +456,14 @@ namespace api.Services
                         SELECT 1 FROM information_schema.tables
                         WHERE table_schema = 'silver' AND table_name = '{execucao.TabelaSilver}'
                     ) THEN
-                        EXECUTE format('DELETE FROM silver.%I WHERE batch_id::text = %L', '{execucao.TabelaSilver}', '{batchIdStr}');
+                        {silverBlock}
                     END IF;
                     IF EXISTS (
                         SELECT 1 FROM information_schema.tables
                         WHERE table_schema = 'gold' AND table_name = '{execucao.TabelaGold}'
                     ) THEN
-                        EXECUTE format('DELETE FROM gold.%I WHERE batch_id::text = %L', '{execucao.TabelaGold}', '{batchIdStr}');
-                    END IF;{extraGoldDeletes}
+                        {goldBlock}
+                    END IF;{extraGoldBlocks}
                 END $$;
                 DELETE FROM bronze.arquivos_brutos WHERE batch_id = '{batchIdStr}';
                 """;

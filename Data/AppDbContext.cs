@@ -44,6 +44,7 @@ namespace api.Data
                 .HasOne(e => e.Pipeline)
                 .WithMany()
                 .HasForeignKey(e => e.PipelineId)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<PipelineExecucao>()
