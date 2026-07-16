@@ -11,4 +11,4 @@ WORKDIR /app
 COPY --from=build /app/publish .
 EXPOSE 5042
 ENV ASPNETCORE_URLS=http://0.0.0.0:5042
-ENTRYPOINT ["dotnet", "api.dll"]
+ENTRYPOINT ["dotnet", "PlataformaWebDadosUnB.dll"]
