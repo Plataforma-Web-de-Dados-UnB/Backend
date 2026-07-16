@@ -102,10 +102,10 @@ using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     var dbContext = services.GetRequiredService<AppDbContext>();
-    
+
     dbContext.Database.Migrate();
     dbContext.Database.ExecuteSqlRaw("CREATE EXTENSION IF NOT EXISTS \"unaccent\";");
-    
+
     var userManager = services.GetRequiredService<UserManager<Usuario>>();
 
     var configuration = services.GetRequiredService<IConfiguration>();
